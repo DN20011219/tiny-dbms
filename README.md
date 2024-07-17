@@ -4,7 +4,7 @@ A tiny vector dbms, includes some basic knowledge about vdbms, and some implemen
 # 1. how to start
 ## use terminal:
 ```
-makedir build
+mkdir build
 cd build
 cmake ..
 make
