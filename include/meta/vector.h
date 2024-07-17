@@ -9,6 +9,8 @@
 
 #include <cassert>
 
+namespace tiny_v_dbms {
+
 template<typename LENGTH_TYPE, typename DATA_TYPE>
 class Vector
 {
@@ -34,20 +36,27 @@ public:
     * @param data data to store.
     * @param length length of data.
     */
-    Vector(DATA_TYPE* data, LENGTH_TYPE length) {
+    Vector(const DATA_TYPE* data, LENGTH_TYPE length) {
         data_size = sizeof(DATA_TYPE);
         vector_length = length;
-        this->data = data;
-    } 
+        this->data = new DATA_TYPE[length];
+        memcpy(this->data, data, length * data_size); // Copy the data
+    }
     
     inline DATA_TYPE Get(LENGTH_TYPE position) {
         assert(position >= 0 && position < vector_length);
         return *(data + position);
     }
 
+    inline LENGTH_TYPE GetLength() {
+        return vector_length;
+    }
+
     ~Vector() {
         delete[] data;
     }
 };
+
+}
 
 #endif // VDBMS_META_VECTOR_H_
