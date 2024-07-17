@@ -30,6 +30,14 @@ public:
   }
 
   /**
+  * @brief Set the cal function, open to children class.
+  * @param cal_function calculate function.
+  */
+  void SetCalFunction(DATA_TYPE (*cal_function)(BASE_VECTOR & first, BASE_VECTOR & left)) {
+    this->cal_function = cal_function;
+  }
+
+  /**
   * @brief The default function to calculate the distance between two vectors. Add up the differences in each digit.
   * @param first_vector first vector.
   * @param second_vector second vector.
@@ -38,7 +46,7 @@ public:
 
     assert(first_vector.GetLength() == second_vector.GetLength());
 
-    DATA_TYPE result = first_vector.Get(0) - first_vector.Get(0);
+    DATA_TYPE result = 0;
     for (DATA_TYPE i = 0; i < first_vector.GetLength(); i++) {
       result += (first_vector.Get(i) - second_vector.Get(i));
     }
