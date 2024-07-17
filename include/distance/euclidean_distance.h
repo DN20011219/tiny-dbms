@@ -13,7 +13,9 @@ namespace tiny_v_dbms {
 
 template<typename DATA_TYPE>
 class EuclideanDistance : public BasicDistance<DATA_TYPE> {
+
 public:
+
     EuclideanDistance() {
         this->SetCalFunction(EuclideanDistanceFunction);
     }
@@ -38,6 +40,7 @@ public:
     
         return sqrt(result);
     }
+    
 };
 
 }
