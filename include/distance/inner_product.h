@@ -3,8 +3,8 @@
 // file  : inner_product.h
 // since : 2024-07-17
 // desc  : 
-#ifndef VDBMS_DISTANCE_EUCLIDEAN_DISTANCE_H_
-#define VDBMS_DISTANCE_EUCLIDEAN_DISTANCE_H_
+#ifndef VDBMS_DISTANCE_INNER_PRODUCT_H_
+#define VDBMS_DISTANCE_INNER_PRODUCT_H_
 
 #include "basic_distance.h"
 
@@ -39,4 +39,4 @@ public:
 };
 
 }
-#endif // VDBMS_DISTANCE_EUCLIDEAN_DISTANCE_H_
+#endif // VDBMS_DISTANCE_INNER_PRODUCT_H_

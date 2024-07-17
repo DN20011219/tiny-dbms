@@ -9,6 +9,12 @@
 
 #include "meta/vector.h"
 
-#define BASE_VECTOR Vector<int, double>
+namespace tiny_v_dbms {
+    #define BASE_VECTOR Vector<int, double>
+    #define default_length_size int 
+    #define default_enum_type int
+    enum column_type {NUMBER, VECTOR, VCHAR};
+    enum column_index_type {NONE, FLAT};
+}
 
 #endif // VDBMS_CONFIG_H_
