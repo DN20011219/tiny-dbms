@@ -17,6 +17,7 @@
 #include <dirent.h>
 
 #include "../storage/file_management.h"
+#include "db_management.h"
 
 using std::string;
 using std::cin;
@@ -27,13 +28,12 @@ using std::ios;
 namespace tiny_v_dbms {
 
 
-
     // get install path from file
     void GetInstallPath(string& install_path) 
     {
         FileManagement file_mm;
-        string cache_file_uri = "./install_url.txt";
-        std::ifstream file_read = file_mm.OpenOrCreateFile(cache_file_uri);
+        string cache_file_uri = INSTALL_PATH_CACHE_FILE;
+        std::ifstream file_read = file_mm.ReadOrCreateFile(cache_file_uri);
         if (!file_read) {
             throw std::runtime_error("Failed to open install file for reading");
         }
@@ -44,7 +44,7 @@ namespace tiny_v_dbms {
 
     void WriteInstallPath(string& install_path) 
     {
-        string cache_file_uri = "./install_url.txt";
+        string cache_file_uri = INSTALL_PATH_CACHE_FILE;
         std::ofstream file_write;
         file_write.open(cache_file_uri);
         file_write.write(install_path.c_str(), install_path.length());
@@ -57,12 +57,12 @@ namespace tiny_v_dbms {
         FileManagement file_mm;
 
         // create folder
-        string folder_path = install_path + "/default_db";
+        string folder_path = install_path + "/" + DEFAULT_DB_FOLDER_NAME;
         file_mm.OpencvDirAndMkdir(folder_path);
 
         // create db file
-        string file_path = folder_path + "/" + "default_db.tvdb";
-        string mock_write_data = "install_success"; // TODO:change it to a real db file
+        string file_path = folder_path + "/" + DEFAULT_DB_FILE_NAME;
+        string mock_write_data = "install_success";     // TODO:change it to a real db file
         const char* data_pointer = mock_write_data.c_str();
         file_mm.WriteFile(file_path, data_pointer, mock_write_data.length());
     }
@@ -82,19 +82,15 @@ namespace tiny_v_dbms {
             cout << "input the install path (must be a folder): ";
             cin >> install_path;
             cout << "try install tiny-vector-dbms in " << install_path << std::endl;
-            
-            // check install folder exist and empty
-            DIR* install_dir = opendir(install_path.c_str());
-            FileManagement file_mm;
-            if (install_dir == nullptr) {
-                throw std::runtime_error("Install path not exist!");
-            }
-            file_mm.IsEmptyDir(install_path);
 
-            CreateBaseDB(install_path); // create a default db file.
-            WriteInstallPath(install_path); // write install path to storage file
+            // write install path to storage file
+            WriteInstallPath(install_path); 
 
-            cout << "install successfully" << install_path << std::endl;
+            // install the default db
+            DBManagement db_mm;
+            db_mm.CreateDefaultDB();
+
+            cout << "install successfully in: " << install_path << std::endl;
         }
     }
 

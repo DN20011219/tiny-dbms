@@ -9,11 +9,16 @@
 
 #include <mutex>
 #include <list>
+#include <iostream>
 
 #include "../config.h"
+#include "block_replacer.h"
 
 using std::mutex;
 using std::list;
+using std::cout;
+using std::endl; 
+
 
 namespace tiny_v_dbms {
 
@@ -45,10 +50,18 @@ class MemoryManagement {
     list<MemoryBlock*> free_table_blocks;
     list<MemoryBlock*> using_table_blocks;
 
+
+    BlockReplacer* data_replacer;
+    BlockReplacer* table_replacer;
 public:
+    ~MemoryManagement()
+    {
+        free(data_memory_blocks);
+        free(table_memory_blocks);
+    }
 
-    MemoryManagement() {
-
+    MemoryManagement()
+    {
         // init data blocks slots
         default_length_size total_space = (default_length_size) MEMORY_SIZE;
         max_data_block_amount = (total_space / 4 * 3) / MemoryBlock::GetSize(); // use max 3/4 of total space
@@ -64,16 +77,57 @@ public:
             free_table_blocks.push_back(& table_memory_blocks[i]);
         }
 
+        AnalysizeSpaceUsed();
+
+        // so can use different replace strategy in different type memory
+        BlockReplacer replacer_one(data_memory_blocks, max_data_block_amount, free_data_blocks, using_data_blocks);
+        data_replacer = &replacer_one;
+
+        BlockReplacer replacer_two(table_memory_blocks, max_table_block_amount, free_table_blocks, using_table_blocks);
+        table_replacer = &replacer_two;
     }
 
+    // analysize the memory space use
+    void AnalysizeSpaceUsed()
+    {
+        cout << "______now spcace use analysize______" << endl;
+        cout << "max_data_block_amount: " << max_data_block_amount << endl;
+        cout << "max_table_block_amount: " << max_table_block_amount << endl;
+        cout << "free_data_blocks: " << free_data_blocks.size() << endl;
+        cout << "free_table_blocks: " << free_table_blocks.size() << endl;
+        cout << "____________analysize end____________" << endl;
+    }
 
     // read first table block of this db
-    void ReadFirstTableBlockFromDisk(char*& block) {
-        // 
+    void ReadFirstTableBlockFromDisk(char*& block) 
+    {
+        
     }
 
+    // use replacer to get a free table block
+    void GetFreeTableBlock(char*& data)
+    {
+        if (!table_replacer->GetFreeBlock(data))
+        {
+            throw std::runtime_error("No enough space");
+        }
+    }
 
+    void GetFreeDataBlock(char*& data)
+    {
+        if (!data_replacer->GetFreeBlock(data))
+        {
+            throw std::runtime_error("No enough space");
+        }
+    }
 
+    void ReleaseBlock(char* data)
+    {
+        if (!data_replacer->ReleaseBlock(data))
+        {
+            table_replacer->ReleaseBlock(data);
+        }
+    }
     // void ExtendBlockSpace() {
     //     default_amount_type cache = block_amount * block_amount;
     //     cache = cache < max_block_amount ? cache : max_block_amount; // extends space = now space * 2
