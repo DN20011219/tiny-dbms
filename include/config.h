@@ -11,8 +11,14 @@
 
 namespace tiny_v_dbms {
     // config about this dbms
-    #define INSTALL_PATH "./install_url.txt";   // the uri of config file, use to store the path where installed this project
- 
+    #define INSTALL_PATH_CACHE_FILE "./install_url.txt";         // the uri of config file, use to store the path where installed this dbms
+    #define DEFAULT_DB_FOLDER_NAME "default_db";                 // the name of installed default db folder
+    #define DB_FILE_SUFFIX ".tvdb";                              // the suffix of all db file
+    #define DEFAULT_DB_FILE_NAME "default_db";                   // the name of default db file
+    #define TABLE_FILE_SUFFIX ".tvdbb";                          // the suffix of all table file
+    #define DEFAULT_TABLE_FOLDER "tables";                       // this folder will store all tables data, it is under "db_name"(DB_FOLDER_NAME) folder
+    #define DEFAULT_TABLE_NAME "default_table";                  // the name of default db table file, each db has one default_table to store all tables information in db
+
     // config about storage
     #define MEMORY_SIZE 10737418239;            // the size of the memory, any memory using need to acquire space here, 10737418239 byte (1g)
     #define BLOCK_SIZE 4096;                    // the size of one block is 4096 byte (4kb)

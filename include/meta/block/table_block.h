@@ -48,7 +48,7 @@ public:
 
     void CalAndUpdateFreeSpace() {
 
-        free_space = BLOCK_SIZE - sizeof(default_amount_type) - sizeof(default_length_size) - sizeof(default_address_type);
+        free_space = (int)BLOCK_SIZE - sizeof(default_amount_type) - sizeof(default_length_size) - sizeof(default_address_type);
 
         if (table_amount != 0) {
             free_space -= BLOCK_SIZE - tables_begin_address[table_amount - 1];

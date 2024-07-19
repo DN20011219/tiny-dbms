@@ -25,6 +25,7 @@ class FileManagement
 {
 public:
     
+    // not used read
     void ReadFile(string& file_dir, char* memory_pointer) {
         std::ifstream file(file_dir, ios::binary);
         if (!file) {
@@ -46,7 +47,10 @@ public:
         file.close();
     }
 
-    std::ifstream OpenOrCreateFile(const string& file_path)
+
+    // open a read stream to input file_path
+    // if file not exist, create one and open it
+    std::ifstream ReadOrCreateFile(const string& file_path)
     {
         std::ifstream file_write;
 
@@ -93,7 +97,7 @@ public:
             closedir(dir);
         }
     }
-    
+
 private:
     
 };
