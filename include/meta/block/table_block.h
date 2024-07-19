@@ -31,6 +31,7 @@
 #define VDBMS_META_BLOCK_TABLE_BLOCK_H_
 
 #include "../table/column_table.h"
+#include "../../memory/memory_ management.h"
 
 namespace tiny_v_dbms {
 
@@ -46,15 +47,71 @@ public:
     // dynamic space
     default_address_type* tables_begin_address; // store the begin address of each table
 
-    void CalAndUpdateFreeSpace() {
+    // not serialize field
+    char* data;                                 // data in memory
+    
+    TableBlock()
+    {
+        table_amount = 0;
+        CalAndUpdateFreeSpace();
+        next_block_pointer = 0x0;
 
-        free_space = (int)BLOCK_SIZE - sizeof(default_amount_type) - sizeof(default_length_size) - sizeof(default_address_type);
+        // open one memory block to
+        MemoryManagement* mm = MemoryManagement::GetInstance();
+        mm->GetFreeTableBlock(data);
+    }
+
+    ~TableBlock()
+    {
+
+    }
+
+    void CalAndUpdateFreeSpace()
+    {
+        free_space = BLOCK_SIZE;
+        free_space -= sizeof(default_amount_type) - sizeof(default_length_size) - sizeof(default_address_type);
 
         if (table_amount != 0) {
-            free_space -= BLOCK_SIZE - tables_begin_address[table_amount - 1];
+            default_length_size used_space = BLOCK_SIZE;
+            used_space -= tables_begin_address[table_amount - 1];
+            free_space -= used_space;
         }
     }
 
+    // return true if the address is ok
+    // return false when there has no space to contain the table in this block
+    bool CalBeginAddress(Column_Table* table, default_address_type& address)
+    {
+        if (table_amount == 0)
+        {
+            address = BLOCK_SIZE;
+            address -= table->GetSize();
+            return true;
+        }
+
+        address = tables_begin_address[table_amount - 1] - table->GetSize();
+
+        // if this block has no space to contain this table
+        if (address < sizeof(default_amount_type) - sizeof(default_length_size) - sizeof(default_address_type))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    void InsertTable(Column_Table* table)
+    {   
+        default_address_type insert_address;
+        if (CalBeginAddress(table, insert_address))
+        {
+            // TODO: 
+        }
+        else{
+            // TODO: create new table block and insert
+        }
+        table_amount++;
+
+    }
 };
 
 }
