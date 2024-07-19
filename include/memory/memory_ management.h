@@ -36,6 +36,8 @@ struct MemoryBlock
 };
 
 class MemoryManagement {
+
+private:
     default_amount_type max_data_block_amount;  // store data block
     default_amount_type data_block_amount;      // maybe not used
 
@@ -53,7 +55,45 @@ class MemoryManagement {
 
     BlockReplacer* data_replacer;
     BlockReplacer* table_replacer;
+
+    // 唯一单实例对象指针
+    static MemoryManagement *m_SingleInstance;
+    static std::mutex m_Mutex;
+
 public:
+
+    // get singleton MemoryManagement
+    static MemoryManagement *&GetInstance()
+    {
+        if (m_SingleInstance == NULL) 
+        {
+            std::unique_lock<std::mutex> lock(m_Mutex); // 加锁
+            if (m_SingleInstance == NULL)
+            {
+                m_SingleInstance = new (std::nothrow) MemoryManagement;
+            }
+        }
+
+        return m_SingleInstance;
+    }
+
+    //释放单实例，进程退出时调用
+    static void deleteInstance()
+    {
+        std::unique_lock<std::mutex> lock(m_Mutex);
+        if (m_SingleInstance)
+        {
+            delete m_SingleInstance;
+            m_SingleInstance = NULL;
+        }
+    }
+
+private:
+    
+    MemoryManagement(const MemoryManagement &signal);
+
+    const MemoryManagement &operator=(const MemoryManagement &signal);
+
     ~MemoryManagement()
     {
         free(data_memory_blocks);
@@ -87,6 +127,8 @@ public:
         table_replacer = &replacer_two;
     }
 
+public:
+
     // analysize the memory space use
     void AnalysizeSpaceUsed()
     {
@@ -101,7 +143,7 @@ public:
     // read first table block of this db
     void ReadFirstTableBlockFromDisk(char*& block) 
     {
-        
+
     }
 
     // use replacer to get a free table block
@@ -128,6 +170,7 @@ public:
             table_replacer->ReleaseBlock(data);
         }
     }
+
     // void ExtendBlockSpace() {
     //     default_amount_type cache = block_amount * block_amount;
     //     cache = cache < max_block_amount ? cache : max_block_amount; // extends space = now space * 2

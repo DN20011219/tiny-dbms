@@ -94,9 +94,8 @@ namespace tiny_v_dbms {
         }
     }
 
-    int StartBench() 
+    void StartBench() 
     {
-
         char ctr;
         while(true) {
             cin >> ctr;
@@ -115,7 +114,6 @@ namespace tiny_v_dbms {
                 break;
             }
         }
-
     }
 
  
