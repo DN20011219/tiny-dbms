@@ -6,6 +6,8 @@
 // each block only store one type of field (same named fields from different t-
 // ables are regarded as different fields), and data is stored one besides ano-
 // ther one.
+// Beside, all blocks of one table will be stored in one file. use the block nu-
+// mber to locate the block.
 
 #ifndef VDBMS_META_BLOCK_COLUMN_BLOCK_H_
 #define VDBMS_META_BLOCK_COLUMN_BLOCK_H_
