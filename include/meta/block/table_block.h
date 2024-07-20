@@ -49,14 +49,14 @@ public:
 
     // not serialize field
     char* data;                                 // data in memory
-    
+
     TableBlock()
     {
         table_amount = 0;
         CalAndUpdateFreeSpace();
         next_block_pointer = 0x0;
 
-        // open one memory block to
+        // open one memory block
         MemoryManagement* mm = MemoryManagement::GetInstance();
         mm->GetFreeTableBlock(data);
     }

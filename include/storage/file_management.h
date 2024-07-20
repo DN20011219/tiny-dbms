@@ -47,6 +47,30 @@ public:
         file.close();
     }
 
+    /**
+     * Appends data from memory to a file.
+     * 
+     * @param file_dir The directory path and filename to append to.
+     * @param memory_pointer A pointer to the memory location containing the data to append.
+     * @param data_size The size of the data to append in bytes.
+     * 
+     * @throws std::runtime_error If the file cannot be opened for appending.
+     * 
+     * Example:
+     * ```cpp
+     * int data[] = {1, 2, 3, 4, 5};
+     * WriteFile("example.bin", reinterpret_cast<const char*>(data), sizeof(data));
+     * ```
+     * This example appends the contents of the `data` array to a file named "example.bin".
+     */
+    void WriteFileAppend(string& file_dir, const char* memory_pointer, default_length_size data_size) {
+        std::ofstream file(file_dir, ios::binary | ios::app);
+        if (!file) {
+            throw std::runtime_error("Failed to open file for appending");
+        }
+        file.write(memory_pointer, data_size);
+        file.close();
+    }
 
     // open a read stream to input file_path
     // if file not exist, create one and open it
@@ -55,6 +79,7 @@ public:
         std::ifstream file_write;
 
         file_write.open(file_path, ios::binary);
+        
         if (!file_write || !file_write.is_open())
         {
             std::ofstream fout(file_path);
