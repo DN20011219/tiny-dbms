@@ -8,11 +8,14 @@
 #define VDBMS_MEMORY_BLOCK_REPLACER_H_
 
 #include <map>
+#include <list>
 
-#include "memory_ management.h"
-
+#include "memory_management.h"
+#include "memory_block.h"
 
 namespace tiny_v_dbms {
+
+using std::list;
 
 class BlockReplacer
 {

@@ -23,9 +23,10 @@ install folder
 #include "../config.h"
 #include "../meta/db/db.h"
 #include "../storage/file_management.h"
-#include "../memory/memory_ management.h"
+#include "../memory/memory_management.h"
 #include "../meta/table/column_table.h"
 #include "../meta/block/table_block.h"
+#include "../storage/table_file_management.h"
 
 namespace tiny_v_dbms {
 
@@ -90,44 +91,53 @@ public:
         std::cout << "default_db description: " << new_db.db_name << " " << new_db.db_description << " " << new_db.db_header_path << std::endl;
 
         // store table file, this table contains all db names in this db management
-        ColumnTable default_table;
-        default_table.table_name = DEFAULT_TABLE_NAME;
-        // SerializeTableFile(default_table, default_table_uri);
 
-       
+       CreateDefaultTable(default_table_uri);
     }
 
     // create the first table of first db.
     // this table will stores all of the else db names. so can check whether are they existed in this system.
-    void CreateDefaultTable(string& table_name, ColumnTable& default_table)
+    void CreateDefaultTable(string& file_path)
     {
         MemoryManagement* mm = MemoryManagement::GetInstance();
 
         // construct a block
         TableBlock block;
 
-        // controled by memory
-        char* data;
-        mm->GetFreeTableBlock(data);
+        // make block controlled by mm
+        mm->GetFreeTableBlock(block.data);
 
         // construct a column_table
         ColumnTable ct;
         ct.table_name = DEFAULT_TABLE_NAME;
         ct.table_type = COMMON;
-        ct.column_size = 1;
-        // set column name
-        ct.column_name_array = new string[1];
-        ct.column_name_array[0] = DEFAULT_TABLE_COLUMN_NAME;
-        // set column type
-        ct.column_type_array = new default_enum_type[1];
-        ct.column_type_array[0] = VCHAR;
-        // set column index type
-        ct.column_index_type_array = new default_enum_type[1];
-        ct.column_index_type_array[0] = NONE;
+
+        string column_name = DEFAULT_TABLE_COLUMN_NAME;
+        default_enum_type column_type = VCHAR;
+        default_enum_type index_type = NONE;
+        string column = DEFAULT_TABLE_COLUMN_NAME;
         
+        ct.InsertColumn(column_name, column_type, index_type, NONE);
+
+        // update block data
         block.InsertTable(&ct);
 
+        // write data in memory back to file, use TableFileManagement
+        TableFileManagement tfmm;
+        fstream file_stream;
 
+        // open table file, like "test.tvdbb"
+        tfmm.OpenDataFile(file_path, file_stream);
+        // get free block address in file
+        default_address_type free_address = tfmm.GetFreeBlockAddress(file_stream);
+        // write back
+        block.Serialize();
+        tfmm.WriteBackBlock(file_stream, free_address, block.data);
+        
+        file_stream.close();
+
+        // release block in memory
+        mm->ReleaseBlock(block.data);
     }
 
     // TODO
@@ -160,11 +170,11 @@ public:
         file_read.close();
     } 
 
-    string SerializeTableFile(ColumnTable& table)
-    {  
+    // string SerializeTableFile(ColumnTable& table)
+    // {  
 
 
-    }
+    // }
 
 
 };

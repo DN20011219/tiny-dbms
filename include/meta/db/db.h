@@ -18,8 +18,6 @@ struct DB
     string db_name;
     string db_description;
     string db_header_path; // the first table block of this db. so can find all tables from it. here use the url for first addressing.  
-
-
 };
 
 

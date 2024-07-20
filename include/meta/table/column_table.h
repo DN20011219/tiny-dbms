@@ -32,7 +32,7 @@ public:
 
     // information about the table
     string table_name;
-    string table_type;
+    default_enum_type table_type;
     default_amount_type column_size;                // amount of column
     string* column_name_array;                      // names of each column
     default_enum_type* column_type_array;           // type of each column
@@ -138,10 +138,10 @@ public:
         offset += table_name_size;
 
         // Write the table type
-        size_t table_type_size = table_type.size();
-        memcpy(buffer + offset, &table_type_size, sizeof(size_t));
-        offset += sizeof(size_t);
-        memcpy(buffer + offset, table_type.c_str(), table_type_size);
+        size_t table_type_size = sizeof(table_type);
+        // memcpy(buffer + offset, &table_type_size, sizeof(size_t));
+        // offset += sizeof(size_t);
+        memcpy(buffer + offset, &table_type, table_type_size);
         offset += table_type_size;
 
         // Write the column size
@@ -204,12 +204,12 @@ public:
         offset += table_name_size;
 
         // Read the table type
-        size_t table_type_size;
-        memcpy(&table_type_size, buffer + offset, sizeof(size_t));
-        offset += sizeof(size_t);
-        table_type.resize(table_type_size);
-        memcpy(&table_type[0], buffer + offset, table_type_size);
-        offset += table_type_size;
+        // size_t table_type_size;
+        // memcpy(&table_type_size, buffer + offset, sizeof(size_t));
+        // offset += sizeof(size_t);
+        // table_type.resize(table_type_size);
+        memcpy(&table_type, buffer + offset, sizeof(table_type));
+        offset += sizeof(table_type);
 
         // Read the column size
         memcpy(&column_size, buffer + offset, sizeof(default_amount_type));
