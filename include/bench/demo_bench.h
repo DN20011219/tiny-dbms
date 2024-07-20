@@ -102,7 +102,7 @@ namespace tiny_v_dbms {
             switch (ctr)
             {
             case 'Q': // quit
-                return 0;
+                return;
             case 'T': // test
                 cout << "test" << std::endl;
                 break;

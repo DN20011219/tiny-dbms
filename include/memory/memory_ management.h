@@ -46,6 +46,11 @@ private:
     MemoryBlock* data_memory_blocks;            // all blocks in this mm
     MemoryBlock* table_memory_blocks;           // all table blocks in this mm
 
+
+    static MemoryManagement *m_SingleInstance;  // singleton object
+    static std::mutex m_Mutex;
+
+    // belows are replacer 
     list<MemoryBlock*> free_data_blocks;
     list<MemoryBlock*> using_data_blocks;
     
@@ -56,9 +61,7 @@ private:
     BlockReplacer* data_replacer;
     BlockReplacer* table_replacer;
 
-    // 唯一单实例对象指针
-    static MemoryManagement *m_SingleInstance;
-    static std::mutex m_Mutex;
+
 
 public:
 
