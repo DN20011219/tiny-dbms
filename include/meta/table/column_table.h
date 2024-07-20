@@ -15,8 +15,8 @@ column_storage_address.             such as |0x0000|
 */
 
 
-#ifndef VDBMS_FLAT_INDEX_
-#define VDBMS_FLAT_INDEX_
+#ifndef VDBMS_META_TABLE_COLUMN_TABLE_H_
+#define VDBMS_META_TABLE_COLUMN_TABLE_H_
 
 #include <string>
 
@@ -26,8 +26,9 @@ namespace tiny_v_dbms {
 
 using std::string; 
 
-struct Column_Table 
+class ColumnTable 
 {
+public:
 
     // information about the table
     string table_name;
@@ -38,7 +39,7 @@ struct Column_Table
     default_enum_type* column_index_type_array;     // index type of each column
 
     // information about where to store actual data
-    default_address_type* column_storage_address;   // where to store each column, is the address of first block
+    default_address_type* column_storage_address_array;   // where to store each column, is the address of first block number in table data file
 
     /**
     * @brief return the space cost of this table header.
@@ -48,7 +49,77 @@ struct Column_Table
     }
 
     /**
-     * @brief Serialize the Column_Table struct to a binary buffer.
+     * Inserts a new column into the table.
+     * 
+     * This function increases the column size by 1 and updates the column name array.
+     * 
+     * @param column_name The name of the new column to be inserted.
+     * @param column_type The data type of the new column (e.g. integer, string, etc.).
+     * @param column_index_type The type of index to be created for the new column (e.g. primary key, unique, etc.).
+     * @param column_storage_address The storage address for the new column.
+     * 
+     * Example:
+     * ```cpp
+     * InsertColumn("Age", INTEGER, PRIMARY_KEY, 0x1000);
+     * ```
+     * This example inserts a new column named "Age" with an integer data type, a primary key index, and a storage address of 0x1000.
+    */
+    void InsertColumn(
+        string column_name, 
+        default_enum_type column_type,
+        default_enum_type column_index_type,
+        default_address_type column_storage_address
+        )
+    {
+        column_size++;
+
+        // Update the column name array
+        string* cache_column_name_array = new string[column_size];
+        for (int i = 0; i < column_size - 1; i++)
+        {
+            cache_column_name_array[i] = column_name_array[i];
+        }
+        cache_column_name_array[column_size - 1] = column_name;
+
+        delete[] column_name_array;
+        column_name_array = cache_column_name_array;
+
+        // Update the column type array
+        default_enum_type* cache_column_type_array = new default_enum_type[column_size];
+        for (int i = 0; i < column_size - 1; i++)
+        {
+            cache_column_type_array[i] = column_type_array[i];
+        }
+        cache_column_type_array[column_size - 1] = column_type;
+
+        delete[] column_type_array;
+        column_type_array = cache_column_type_array;
+
+        // Update the column index type array
+        default_enum_type* cache_column_index_type_array = new default_enum_type[column_size];
+        for (int i = 0; i < column_size - 1; i++)
+        {
+            cache_column_index_type_array[i] = column_index_type_array[i];
+        }
+        cache_column_index_type_array[column_size - 1] = column_index_type;
+
+        delete[] column_index_type_array;
+        column_index_type_array = cache_column_index_type_array;
+
+        // Update the column storage address array
+        default_address_type* cache_column_storage_address = new default_address_type[column_size];
+        for (int i = 0; i < column_size - 1; i++)
+        {
+            cache_column_storage_address[i] = column_storage_address_array[i];
+        }
+        cache_column_storage_address[column_size - 1] = column_storage_address;
+
+        delete[] column_storage_address_array;
+        column_storage_address_array = cache_column_storage_address;
+    }   
+
+    /**
+     * @brief Serialize the ColumnTable struct to a binary buffer.
      * 
      * @return A pointer to the serialized data.
      * @return The length of the serialized data.
@@ -108,7 +179,7 @@ struct Column_Table
         memcpy(buffer + offset, &column_size, sizeof(default_amount_type));
         offset += sizeof(default_amount_type);
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(buffer + offset, &column_storage_address[i], sizeof(default_address_type));
+            memcpy(buffer + offset, &column_storage_address_array[i], sizeof(default_address_type));
             offset += sizeof(default_address_type);
         }
 
@@ -116,7 +187,7 @@ struct Column_Table
     }
 
     /**
-     * @brief Deserialize a Column_Table struct from a binary buffer.
+     * @brief Deserialize a ColumnTable struct from a binary buffer.
      * 
      * @param buffer The binary buffer to read from.
      * @param length The length of the binary buffer.
@@ -170,9 +241,9 @@ struct Column_Table
         }
 
         // Read the column storage address array
-        column_storage_address = new default_address_type[column_size];
+        column_storage_address_array = new default_address_type[column_size];
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(&column_storage_address[i], buffer + offset, sizeof(default_address_type));
+            memcpy(&column_storage_address_array[i], buffer + offset, sizeof(default_address_type));
             offset += sizeof(default_address_type);
         }
     }
@@ -180,4 +251,4 @@ struct Column_Table
 
 }
 
-#endif // VDBMS_FLAT_INDEX_
+#endif // VDBMS_META_TABLE_COLUMN_TABLE_H_
