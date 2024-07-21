@@ -56,6 +56,7 @@ private:
 
     ~MemoryManagement()
     {
+        std::cout << "____MemoryManagement has been deleted___" << std::endl;
         delete[] data_memory_blocks;
         delete[] table_memory_blocks;
     }
@@ -126,12 +127,12 @@ public:
     // analysize the memory space use
     void AnalysizeSpaceUsed()
     {
-        cout << "______now spcace use analysize______" << endl;
+        cout << "______now memory spcace use analysize______" << endl;
         cout << "max_data_block_amount: " << max_data_block_amount << endl;
         cout << "max_table_block_amount: " << max_table_block_amount << endl;
         cout << "free_data_blocks: " << free_data_blocks.size() << endl;
         cout << "free_table_blocks: " << free_table_blocks.size() << endl;
-        cout << "____________analysize end____________" << endl;
+        cout << "______________analysize end_______________" << endl;
     }
 
     // read first table block of this db
@@ -142,20 +143,21 @@ public:
 
     // use replacer to get a free table block
     void GetFreeTableBlock(char*& data)
-    {
+    {       
+        std::cout << "try get one block on mem" << std::endl;
         if (!table_replacer->GetFreeBlock(data))
-        {
+        {   
             throw std::runtime_error("No enough space");
         }
     }
 
-    void GetFreeDataBlock(char*& data)
-    {
-        if (!data_replacer->GetFreeBlock(data))
-        {
-            throw std::runtime_error("No enough space");
-        }
-    }
+    // void GetFreeDataBlock(char*& data)
+    // {
+    //     if (!data_replacer->GetFreeBlock(data))
+    //     {
+    //         throw std::runtime_error("No enough space");
+    //     }
+    // }
 
     void ReleaseBlock(char* data)
     {

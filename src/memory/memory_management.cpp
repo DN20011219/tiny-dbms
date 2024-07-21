@@ -20,11 +20,14 @@ namespace tiny_v_dbms {
     {   
         std::cout << "SingleInstance MemoryManagement begin create" << std::endl;
 
+        default_length_size block_size = BLOCK_SIZE;
+
         // init data blocks slots
         default_length_size total_space = (default_length_size) MEMORY_SIZE;
         max_data_block_amount = (total_space / 4 * 3) / MemoryBlock::GetSize(); // use max 3/4 of total space
         data_memory_blocks = new MemoryBlock[max_data_block_amount];
         for(int i = 0; i < max_data_block_amount; i++) {
+            data_memory_blocks[i].data = new char[block_size];
             free_data_blocks.push_back(& data_memory_blocks[i]);
         }
 
@@ -32,17 +35,18 @@ namespace tiny_v_dbms {
         max_table_block_amount = (total_space / 8 * 1) / MemoryBlock::GetSize(); // use max 1/8 of total space
         table_memory_blocks = new MemoryBlock[max_table_block_amount];
         for(int i = 0; i < max_table_block_amount; i++) {
+            table_memory_blocks[i].data = new char[block_size];
             free_table_blocks.push_back(& table_memory_blocks[i]);
         }
 
         AnalysizeSpaceUsed();
 
         // so can use different replace strategy in different type memory
-        BlockReplacer replacer_one(data_memory_blocks, max_data_block_amount, free_data_blocks, using_data_blocks);
-        data_replacer = &replacer_one;
+        // BlockReplacer replacer_one(data_memory_blocks, max_data_block_amount, free_data_blocks, using_data_blocks);
+        data_replacer = new BlockReplacer(data_memory_blocks, max_data_block_amount, free_data_blocks, using_data_blocks);
 
-        BlockReplacer replacer_two(table_memory_blocks, max_table_block_amount, free_table_blocks, using_table_blocks);
-        table_replacer = &replacer_two;
+        // BlockReplacer replacer_two(table_memory_blocks, max_table_block_amount, free_table_blocks, using_table_blocks);
+        table_replacer = new BlockReplacer(table_memory_blocks, max_table_block_amount, free_table_blocks, using_table_blocks);
     }
 
 

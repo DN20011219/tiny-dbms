@@ -30,6 +30,7 @@
 #ifndef VDBMS_META_BLOCK_TABLE_BLOCK_H_
 #define VDBMS_META_BLOCK_TABLE_BLOCK_H_
 
+
 #include "../table/column_table.h"
 #include "../../memory/memory_management.h"
 
@@ -51,17 +52,36 @@ public:
 
     TableBlock()
     {
+        std::cout << "init one table block begin" << std::endl;
         table_amount = 0;
         CalAndUpdateFreeSpace();
         next_block_pointer = 0x0;
 
+        // std::cout << "init one table block end1" << std::endl;
+        // init tables_begin_address
+        tables_begin_address = nullptr;
+
+        // std::cout << "init one table block end2" << std::endl;
         // open one memory block
         MemoryManagement* mm = MemoryManagement::GetInstance();
+        // std::cout << "init one table block end3" << std::endl;
         mm->GetFreeTableBlock(data);
+        // std::cout << "table block data address in mem:"<< (void*) data << std::endl;
+        // init memory space
+        default_length_size data_length = BLOCK_SIZE;
+
+        // std::cout << "init one table block end4" << std::endl;
+        // SerializeHeader();
+        std::cout << "init one table block end" << std::endl;
     }
 
     ~TableBlock()
     {
+        std::cout << "delete table block!" << std::endl;
+        
+        MemoryManagement* mm = MemoryManagement::GetInstance();
+        mm->ReleaseBlock(data);
+
         delete[] tables_begin_address;
         delete[] data;
     }
@@ -101,11 +121,43 @@ public:
 
     void InsertTable(ColumnTable* table)
     {   
+        // std::cout << "begin insert table " << std::endl;
         default_address_type insert_address;
+        if (table_amount == 0)
+        {   
+            // std::cout << "first insert table " << std::endl;
+            if (CalBeginAddress(table, insert_address))
+            {  
+                // std::cout << "update block header" << std::endl;
+                
+                table_amount++;
+                tables_begin_address = new default_address_type[1];
+                tables_begin_address[0] = insert_address;
+                
+                // write in memory block
+                std::cout << "write address: " << insert_address << " length: "<< table->Serialize().second << std::endl;
+                std::cout << "data pointer before write:" << (void *)data << std::endl;
+
+                memcpy(data + insert_address, table->Serialize().first, table->Serialize().second);
+                
+                SerializeHeader();
+                std::cout << "write result: " << (size_t)data[4044] << std::endl;
+            }
+            else{
+                throw std::runtime_error("Failed to insert table in block");
+            }
+            std::cout << "insert table end" << std::endl;
+            return;
+        }
+
         if (CalBeginAddress(table, insert_address))
         {   
             table_amount++;
-            tables_begin_address[next_block_pointer] = insert_address;
+            default_address_type* cache_address = new default_address_type[table_amount];
+            memcpy(cache_address, tables_begin_address, (table_amount - 2));
+            cache_address[table_amount - 1] = insert_address;
+            tables_begin_address = cache_address;
+
             // write in memory block
             memcpy(data + insert_address, table->Serialize().first, table->Serialize().second);
         }
@@ -113,6 +165,9 @@ public:
             throw std::runtime_error("Failed to insert table in block");
             // TODO: create new table block and insert
         }
+
+        SerializeHeader();
+        std::cout << "insert table end" << std::endl;
     }
 
     /**
@@ -121,9 +176,8 @@ public:
      * @return A pointer to the serialized data.
      * @return The length of the serialized data.
      */
-    void Serialize() {
+    void SerializeHeader() {
         size_t len = BLOCK_SIZE;
-        data = new char[len];
 
         size_t offset = 0;
 
@@ -151,7 +205,8 @@ public:
      * 
      * @param buffer The binary buffer to read from.
      */
-    void Deserialize(const char* buffer) {
+    void DeserializeFromBuffer(const char* buffer) 
+    {
         size_t offset = 0;
 
         // Read the table amount

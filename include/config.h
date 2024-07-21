@@ -21,7 +21,7 @@ namespace tiny_v_dbms {
     #define DEFAULT_TABLE_COLUMN_NAME "db_name"                  // the default column name of default table, this table only has one column, to store all db in this system
     
     // config about storage
-    #define MEMORY_SIZE 10737418239;            // the size of the memory, any memory using need to acquire space here, 10737418239 byte (1g)
+    #define MEMORY_SIZE 10737418239 / 4;            // the size of the memory, any memory using need to acquire space here, 10737418239 byte (1g) / 4 = 256 mb
     #define BLOCK_SIZE 4096;                    // the size of one block is 4096 byte (4kb)
 
     // config about meta data toe

@@ -18,6 +18,7 @@ column_storage_address.             such as |0x0000|
 #ifndef VDBMS_META_TABLE_COLUMN_TABLE_H_
 #define VDBMS_META_TABLE_COLUMN_TABLE_H_
 
+#include <iostream>
 #include <string>
 
 #include "../../config.h" 
@@ -40,6 +41,11 @@ public:
 
     // information about where to store actual data
     default_address_type* column_storage_address_array;   // where to store each column, is the address of first block number in table data file
+
+    ColumnTable()
+    {
+        column_size = 0;
+    }
 
     /**
     * @brief return the space cost of this table header.
@@ -71,6 +77,27 @@ public:
         default_address_type column_storage_address
         )
     {
+        std::cout << "column begin insert" << std::endl;
+
+        if (column_size == 0)
+        {   
+            std::cout << "first insert" << std::endl;
+            column_name_array = new string[1];
+            column_name_array[0] = column_name;
+
+            column_type_array = new default_enum_type[1];
+            column_type_array[0] = column_type;
+
+            column_index_type_array = new default_enum_type[1];
+            column_index_type_array[0] = column_index_type;
+
+            column_storage_address_array = new default_address_type[1];
+            column_storage_address_array[0] = column_storage_address;
+
+            std::cout << "column end insert" << std::endl;
+            return;
+        }
+
         column_size++;
 
         // Update the column name array
@@ -116,6 +143,8 @@ public:
 
         delete[] column_storage_address_array;
         column_storage_address_array = cache_column_storage_address;
+   
+        std::cout << "column end insert" << std::endl;
     }   
 
     /**

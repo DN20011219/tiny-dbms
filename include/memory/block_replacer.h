@@ -9,6 +9,7 @@
 
 #include <map>
 #include <list>
+#include <iostream>
 
 #include "memory_management.h"
 #include "memory_block.h"
@@ -29,9 +30,16 @@ private:
     std::map<char*, MemoryBlock*> data_block_map;
 
 public:
-    BlockReplacer(MemoryBlock* blocks, default_amount_type max_block_amount, list<MemoryBlock*>& free_blocks, list<MemoryBlock*>& using_blocks):
-        blocks(blocks), max_block_amount(max_block_amount), free_blocks(free_blocks), using_blocks(using_blocks)
+    ~BlockReplacer()
     {
+        std::cout << "BlockReplacer has been destoried" << std::endl;
+    }
+
+    BlockReplacer(MemoryBlock* blocks, default_amount_type max_block_amount, list<MemoryBlock*>& free_blocks_list, list<MemoryBlock*>& using_blocks_list):
+        blocks(blocks), max_block_amount(max_block_amount)
+    {   
+        free_blocks = free_blocks_list;
+        using_blocks = using_blocks_list;
         // cache all blocks add pointer and block map, so can find block using data pointer, could be used in release block
         for(int i = 0; i < max_block_amount; i++)
         {
@@ -39,6 +47,7 @@ public:
             std::pair<char*, MemoryBlock*> pair(data, &blocks[max_block_amount]);
             data_block_map.insert(pair);
         }
+        std::cout << "init free_blocks size: " << free_blocks.size() << std::endl;
     }
 
     // if has one free block, return true and change data to the data pointer of free block, at the same time change the information on block.
@@ -46,7 +55,8 @@ public:
     bool GetFreeBlock(char*& data)
     {
         if(free_blocks.empty())
-        {
+        {   
+            std::cout << "no block to use" << std::endl;
             return false;
         }
         MemoryBlock* block = free_blocks.front();
