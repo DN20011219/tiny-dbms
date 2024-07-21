@@ -8,6 +8,7 @@
 #define VDBMS_STORAGE_TABLE_FILE_MANAGEMENT_H_
 
 #include <string>
+#include <iostream>
 #include <fstream>
 
 
@@ -45,10 +46,11 @@ public:
     */
     void OpenDataFile(string& file_path, fstream& file_stream)
     {   
+        std::cout << "OpenDataFile: " << file_path << std::endl;
         // Check if the file path has the correct suffix
         string suffix = TABLE_FILE_SUFFIX;
-        if (file_path.substr(file_path.find_last_of(".") + 1) != suffix) {
-            throw std::runtime_error("Invalid file suffix. Expected " + suffix);
+        if ("." + file_path.substr(file_path.find_last_of(".") + 1) != suffix) {
+            throw std::runtime_error("Invalid file suffix. Expected:" + suffix + " but found" + file_path.substr(file_path.find_last_of(".") + 1));
         }
 
         // Open the file in read-write mode
@@ -78,7 +80,7 @@ public:
      * file_stream.read(buffer, BLOCK_SIZE); // read the block into the buffer
      * ```
     */
-    void GetBlock(fstream file_stream, default_address_type block_address)
+    void GetBlock(fstream& file_stream, default_address_type block_address)
     {   
         default_length_size block_size = BLOCK_SIZE;
         // check the tables_begin_address is less than file_length / BLOCK_SIZE
@@ -104,7 +106,7 @@ public:
      * default_address_type free_block_address = GetFreeBlockAddress(file_stream);
      * ```
     */
-    default_address_type GetFreeBlockAddress(fstream& file_stream)
+    default_address_type GetNewBlockAddress(fstream& file_stream)
     {
         default_length_size block_size = BLOCK_SIZE;
         return file_stream.tellg() / block_size;
@@ -122,19 +124,28 @@ public:
      * 
      * @example
      * ```cpp
-     * fstream file_stream("example.bin", ios::out | ios::binary);
+     * fstream file_stream("example.tvdbb", ios::out | ios::binary);
      * default_address_type block_address = 5; // write to the 5th block
      * char data[BLOCK_SIZE] = {  initialize data  };
      * WriteBackBlock(file_stream, block_address, data);
      * ```
     */
     void WriteBackBlock(fstream& file_stream, default_address_type block_address, char* data)
-    {
+    {   
+        std::cout << "WriteBackBlock address:" << block_address << std::endl;
         default_length_size block_size = BLOCK_SIZE;
-        file_stream.seekg(block_address * block_size);
+        file_stream.seekg(block_address * block_size, std::ios::beg);
         file_stream.write(data, block_size);
     }
 
+
+    void ReadFromFile(fstream& file_stream, default_address_type block_address, char* data)
+    {
+        std::cout << "ReadFromFile address:" << block_address << std::endl;
+        default_length_size block_size = BLOCK_SIZE;
+        file_stream.seekg(block_address * block_size, std::ios::beg);
+        file_stream.read(data, block_size);
+    }
 private:
 
 };

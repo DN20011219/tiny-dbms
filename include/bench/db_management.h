@@ -47,8 +47,7 @@ private:
 public:
     DBManagement()
     {
-        FileManagement mm;
-        file_mm = &mm;
+        file_mm = new FileManagement();
     }
 
     // create the first db of this system, all information about this db will be stored in this db.
@@ -81,31 +80,30 @@ public:
         DB default_db;
         default_db.db_name = DEFAULT_DB_FILE_NAME;
         default_db.db_description = "The base db of this dbms, has a table, which stores all db about this dbms";
-        default_db.db_header_path = default_table_uri;
+        default_db.db_all_tables_path = default_table_uri;
         SerializeDBFile(default_db, db_file_name);
-        std::cout << "name ----" << default_db.db_name << std::endl;
 
         // test DeserializeDBFile
         DB new_db;
         DeserializeDBFile(new_db, db_file_name);
-        std::cout << "default_db description: " << new_db.db_name << " " << new_db.db_description << " " << new_db.db_header_path << std::endl;
+        std::cout << "default_db description: " << new_db.db_name << "  " << new_db.db_description << "  " << new_db.db_all_tables_path << std::endl;
 
         // store table file, this table contains all db names in this db management
 
-       CreateDefaultTable(default_table_uri);
+        CreateDefaultTable(new_db.db_all_tables_path);
     }
 
     // create the first table of first db.
     // this table will stores all of the else db names. so can check whether are they existed in this system.
-    void CreateDefaultTable(string& file_path)
+    void CreateDefaultTable(string& table_file_path)
     {
-        MemoryManagement* mm = MemoryManagement::GetInstance();
+        cout << "CreateDefaultTable: " << table_file_path << endl;
 
         // construct a block
         TableBlock block;
 
         // make block controlled by mm
-        mm->GetFreeTableBlock(block.data);
+        // mm->GetFreeTableBlock(block.data);
 
         // construct a column_table
         ColumnTable ct;
@@ -127,17 +125,39 @@ public:
         fstream file_stream;
 
         // open table file, like "test.tvdbb"
-        tfmm.OpenDataFile(file_path, file_stream);
-        // get free block address in file
-        default_address_type free_address = tfmm.GetFreeBlockAddress(file_stream);
-        // write back
-        block.Serialize();
-        tfmm.WriteBackBlock(file_stream, free_address, block.data);
-        
-        file_stream.close();
+        tfmm.OpenDataFile(table_file_path, file_stream);
 
-        // release block in memory
-        mm->ReleaseBlock(block.data);
+        // get free block address in file
+        default_address_type free_address = tfmm.GetNewBlockAddress(file_stream);
+        
+        // write back
+        cout << "begin write back" << endl;
+        tfmm.WriteBackBlock(file_stream, free_address, block.data);
+        cout << "end write back" << endl;
+
+        // end use
+        block.~TableBlock();
+
+        // Test deserialize from file
+        // read from file and deserialize, this default block is at 0 offset
+        TableBlock new_block;
+        cout << "begin read" << endl;
+        tfmm.ReadFromFile(file_stream, 0, new_block.data);
+        new_block.DeserializeFromBuffer(new_block.data);
+        cout << "end read" << endl;
+
+        cout 
+        << "Deserialize table data:" 
+        << new_block.table_amount 
+        << " free_space: "
+        << new_block.free_space 
+        << " next_block_pointer: "
+        << new_block.next_block_pointer 
+        << "tables_begin_address: "
+        << new_block.tables_begin_address 
+        << endl;
+
+        file_stream.close();
     }
 
     // TODO
@@ -156,7 +176,7 @@ public:
         file_mm->WriteFileAppend(file_path, &endl, 1);
         file_mm->WriteFileAppend(file_path, db.db_description.c_str(), db.db_description.length());
         file_mm->WriteFileAppend(file_path, &endl, 1);
-        file_mm->WriteFileAppend(file_path, db.db_header_path.c_str(), db.db_header_path.length());
+        file_mm->WriteFileAppend(file_path, db.db_all_tables_path.c_str(), db.db_all_tables_path.length());
         file_mm->WriteFileAppend(file_path, &endl, 1);
     }
     
@@ -166,7 +186,7 @@ public:
         std::ifstream file_read = file_mm->ReadOrCreateFile(file_path);
         getline(file_read, db.db_name);
         getline(file_read, db.db_description);
-        getline(file_read, db.db_header_path);
+        getline(file_read, db.db_all_tables_path);
         file_read.close();
     } 
 
