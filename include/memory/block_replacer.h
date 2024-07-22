@@ -1,8 +1,8 @@
 // Copyright (c) 2024 by dingning
 //
 // file  : block_replace.h
-// since : 2024-07-TODO
-// desc  : TODO.
+// since : 2024-07-20
+// desc  : basic replacer, this is a easy replacer.
 
 #ifndef VDBMS_MEMORY_BLOCK_REPLACER_H_
 #define VDBMS_MEMORY_BLOCK_REPLACER_H_

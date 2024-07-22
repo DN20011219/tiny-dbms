@@ -2,7 +2,7 @@
 //
 // file  : memory_block.h
 // since : 2024-07-20
-// desc  : TODO.
+// desc  : basic block struct, designed to store some information to support replacer.
 
 #ifndef VDBMS_MEMORY_MEMORY_BLOCK_H_
 #define VDBMS_MEMORY_MEMORY_BLOCK_H_
