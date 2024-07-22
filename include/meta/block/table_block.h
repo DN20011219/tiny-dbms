@@ -57,21 +57,13 @@ public:
         CalAndUpdateFreeSpace();
         next_block_pointer = 0x0;
 
-        // std::cout << "init one table block end1" << std::endl;
         // init tables_begin_address
         tables_begin_address = nullptr;
 
-        // std::cout << "init one table block end2" << std::endl;
-        // open one memory block
+        // open one memory block, and make data* controlled by mm
         MemoryManagement* mm = MemoryManagement::GetInstance();
-        // std::cout << "init one table block end3" << std::endl;
         mm->GetFreeTableBlock(data);
-        // std::cout << "table block data address in mem:"<< (void*) data << std::endl;
-        // init memory space
-        default_length_size data_length = BLOCK_SIZE;
 
-        // std::cout << "init one table block end4" << std::endl;
-        // SerializeHeader();
         std::cout << "init one table block end" << std::endl;
     }
 
@@ -83,9 +75,10 @@ public:
         mm->ReleaseBlock(data);
 
         delete[] tables_begin_address;
-        delete[] data;
-    }
 
+        std::cout << "delete table block end!" << std::endl;
+    }
+    
     void CalAndUpdateFreeSpace()
     {
         free_space = BLOCK_SIZE;
@@ -112,7 +105,7 @@ public:
         address = tables_begin_address[table_amount - 1] - table->GetSize();
 
         // if this block has no space to contain this table
-        if (address < sizeof(default_amount_type) - sizeof(default_length_size) - sizeof(default_address_type))
+        if (address < sizeof(default_amount_type) + sizeof(default_length_size) + sizeof(default_address_type) + table_amount * sizeof(default_address_type))
         {
             return false;
         }
@@ -133,7 +126,7 @@ public:
                 table_amount++;
                 tables_begin_address = new default_address_type[1];
                 tables_begin_address[0] = insert_address;
-                
+
                 // write in memory block
                 std::cout << "write address: " << insert_address << " length: "<< table->Serialize().second << std::endl;
                 std::cout << "data pointer before write:" << (void *)data << std::endl;
@@ -143,7 +136,8 @@ public:
                 SerializeHeader();
                 std::cout << "write result: " << (size_t)data[4044] << std::endl;
             }
-            else{
+            else
+            {
                 throw std::runtime_error("Failed to insert table in block");
             }
             std::cout << "insert table end" << std::endl;
@@ -161,7 +155,8 @@ public:
             // write in memory block
             memcpy(data + insert_address, table->Serialize().first, table->Serialize().second);
         }
-        else{
+        else
+        {
             throw std::runtime_error("Failed to insert table in block");
             // TODO: create new table block and insert
         }

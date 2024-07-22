@@ -67,20 +67,20 @@ public:
         db_file_name = db_file_name + DB_FILE_SUFFIX;
         file_mm->ReadOrCreateFile(db_file_name).close();
 
-        // create table folder
-        string default_table_folder = db_folder + "/" + DEFAULT_TABLE_FOLDER;
-        file_mm->OpencvDirAndMkdir(default_table_folder);
+        // // create table folder
+        // string default_table_folder = db_folder + "/" + DEFAULT_TABLE_FOLDER;
+        // file_mm->OpencvDirAndMkdir(default_table_folder);
 
-        // create table file, one db only has one table file, which contains all table blocks.
-        string default_table_uri = default_table_folder + "/" + DEFAULT_TABLE_NAME; 
-        default_table_uri = default_table_uri + TABLE_FILE_SUFFIX;
-        file_mm->ReadOrCreateFile(default_table_uri).close();
+        // // create table file, one db only has one table file, which contains all table blocks.
+        // string default_table_uri = default_table_folder + "/" + DEFAULT_TABLE_NAME; 
+        // default_table_uri = default_table_uri + TABLE_FILE_SUFFIX;
+        // file_mm->ReadOrCreateFile(default_table_uri).close();
 
         // store db file
         DB default_db;
         default_db.db_name = DEFAULT_DB_FILE_NAME;
         default_db.db_description = "The base db of this dbms, has a table, which stores all db about this dbms";
-        default_db.db_all_tables_path = default_table_uri;
+        default_db.db_all_tables_path = GetDefaultTablePath(db_folder);
         SerializeDBFile(default_db, db_file_name);
 
         // test DeserializeDBFile
@@ -88,34 +88,76 @@ public:
         DeserializeDBFile(new_db, db_file_name);
         std::cout << "default_db description: " << new_db.db_name << "  " << new_db.db_description << "  " << new_db.db_all_tables_path << std::endl;
 
-        // store table file, this table contains all db names in this db management
-
+        // create default table
         CreateDefaultTable(new_db.db_all_tables_path);
+    }
+
+
+    /**
+     * @brief Cal and return the default table path base on the input db path.
+     * @param db_path db folder path
+     * @return default table path of the input db path.
+     */
+    string GetDefaultTablePath(string& db_path)
+    {   
+        // create table folder
+        string default_table_folder = db_path + "/" + DEFAULT_TABLE_FOLDER;
+        file_mm->OpencvDirAndMkdir(default_table_folder);
+        return default_table_folder;
+    }
+
+    /**
+     * @brief Cal and return the default table data path base on the input table path.
+     * @param table_path table folder path
+     * @return default table data path of the input db path.
+     */
+    string GetDefaultTableDataPath(string& table_path)
+    {   
+        // create table data folder
+        string default_table_data_folder = table_path + "/" + DEFAULT_TABLE_DATA_FOLDER;
+        file_mm->OpencvDirAndMkdir(default_table_data_folder);
+        return default_table_data_folder;
+    }
+
+    string CreateTableDataFile(string& data_folder_path, string& table_name)
+    {
+        string table_data_file = data_folder_path;
+        table_data_file += "/";
+        table_data_file += table_name;
+        table_data_file += TABLE_DATA_FILE_SUFFIX;
+
+        return table_data_file;
     }
 
     // create the first table of first db.
     // this table will stores all of the else db names. so can check whether are they existed in this system.
-    void CreateDefaultTable(string& table_file_path)
+    void CreateDefaultTable(string& tables_path)
     {
-        cout << "CreateDefaultTable: " << table_file_path << endl;
+        string table_file = tables_path;
+        table_file += "/";
+        table_file += DEFAULT_TABLE_NAME;
+        table_file += TABLE_FILE_SUFFIX;
 
+        cout << "CreateDefaultTable: " << table_file << endl;
+
+        string table_data_uri = GetDefaultTableDataPath(tables_path);
+        cout << "Create data folder: " << table_data_uri << endl;
+
+        string table_name = DEFAULT_TABLE_DATA_FILE_NAME;
+        string data_file_uri = CreateTableDataFile(tables_path, table_name);
+        
+        cout << "Create data file: " << data_file_uri << endl;
+        
         // construct a block
         TableBlock block;
-
-        // make block controlled by mm
-        // mm->GetFreeTableBlock(block.data);
 
         // construct a column_table
         ColumnTable ct;
         ct.table_name = DEFAULT_TABLE_NAME;
         ct.table_type = COMMON;
-
-        string column_name = DEFAULT_TABLE_COLUMN_NAME;
-        default_enum_type column_type = VCHAR;
-        default_enum_type index_type = NONE;
-        string column = DEFAULT_TABLE_COLUMN_NAME;
         
-        ct.InsertColumn(column_name, column_type, index_type, NONE);
+        // construct 
+        ct.InsertColumn(DEFAULT_TABLE_COLUMN_NAME_ONE, VCHAR, VCHAR_LENGTH, NONE, NONE);
 
         // update block data
         block.InsertTable(&ct);
@@ -125,7 +167,7 @@ public:
         fstream file_stream;
 
         // open table file, like "test.tvdbb"
-        tfmm.OpenDataFile(table_file_path, file_stream);
+        tfmm.OpenDataFile(table_file, file_stream);
 
         // get free block address in file
         default_address_type free_address = tfmm.GetNewBlockAddress(file_stream);
@@ -135,11 +177,7 @@ public:
         tfmm.WriteBackBlock(file_stream, free_address, block.data);
         cout << "end write back" << endl;
 
-        // end use
-        block.~TableBlock();
-
-        // Test deserialize from file
-        // read from file and deserialize, this default block is at 0 offset
+        // Test deserialize from file: read from file and deserialize, this default block is at 0 offset
         TableBlock new_block;
         cout << "begin read" << endl;
         tfmm.ReadFromFile(file_stream, 0, new_block.data);
@@ -158,6 +196,11 @@ public:
         << endl;
 
         file_stream.close();
+    }
+
+    void CreateDefaultTableData()
+    {
+        
     }
 
     // TODO

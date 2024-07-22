@@ -4,13 +4,14 @@
 // since : 2024-07-17
 // desc  : Organize data by column, not by row.
 /*
-table_name_size.                    such as 5
-table_name.                         such as test/0
-column_size.                        such as 1
+table_name_size.                    such as |5|
+table_name.                         such as |test/0|
+column_size.                        such as |1|
 column_name_array.                  such as |column1|
 column_type_array.                  such as |0(VECTOR)|
+column_length_array                 such as |20|
 column_index_type_array.            such as |NONE|
-column_storage_address.             such as |0x0000|
+column_storage_address_array.             such as |0x0000|
 
 */
 
@@ -34,17 +35,22 @@ public:
     // information about the table
     string table_name;
     default_enum_type table_type;
-    default_amount_type column_size;                // amount of column
-    string* column_name_array;                      // names of each column
-    default_enum_type* column_type_array;           // type of each column
-    default_enum_type* column_index_type_array;     // index type of each column
+    default_amount_type column_size;                      // amount of column
 
-    // information about where to store actual data
+    string* column_name_array;                            // names of each column
+    default_enum_type* column_type_array;                 // type of each column
+    default_length_size* column_length_array;                   // space cost of each column
+    default_enum_type* column_index_type_array;           // index type of each column
     default_address_type* column_storage_address_array;   // where to store each column, is the address of first block number in table data file
 
     ColumnTable()
     {
         column_size = 0;
+    }
+
+    ~ColumnTable()
+    {
+
     }
 
     /**
@@ -73,28 +79,29 @@ public:
     void InsertColumn(
         string column_name, 
         default_enum_type column_type,
+        default_length_size column_length,
         default_enum_type column_index_type,
         default_address_type column_storage_address
         )
     {
-        std::cout << "column begin insert" << std::endl;
 
         if (column_size == 0)
         {   
-            std::cout << "first insert" << std::endl;
             column_name_array = new string[1];
             column_name_array[0] = column_name;
 
             column_type_array = new default_enum_type[1];
             column_type_array[0] = column_type;
 
+            column_length_array = new default_length_size[1];
+            column_length_array[0] = column_length;
+
             column_index_type_array = new default_enum_type[1];
-            column_index_type_array[0] = column_index_type;
+            column_index_type_array[0] = column_index_type; 
 
             column_storage_address_array = new default_address_type[1];
-            column_storage_address_array[0] = column_storage_address;
+            column_storage_address_array[0] = column_storage_address; // TODO:IMP get address from data file management
 
-            std::cout << "column end insert" << std::endl;
             return;
         }
 
@@ -122,6 +129,17 @@ public:
         delete[] column_type_array;
         column_type_array = cache_column_type_array;
 
+        // update column length array
+        default_length_size* cache_column_length_array = new default_length_size[column_size];
+        for (int i = 0; i < column_size - 1; i++)
+        {
+            cache_column_length_array[i] = column_length_array[i];
+        }
+        cache_column_length_array[column_size - 1] = column_length;
+
+        delete[] column_length_array;
+        column_length_array = cache_column_length_array;
+    
         // Update the column index type array
         default_enum_type* cache_column_index_type_array = new default_enum_type[column_size];
         for (int i = 0; i < column_size - 1; i++)
@@ -134,17 +152,16 @@ public:
         column_index_type_array = cache_column_index_type_array;
 
         // Update the column storage address array
-        default_address_type* cache_column_storage_address = new default_address_type[column_size];
+        default_address_type* cache_column_storage_address_array = new default_address_type[column_size];
         for (int i = 0; i < column_size - 1; i++)
         {
-            cache_column_storage_address[i] = column_storage_address_array[i];
+            cache_column_storage_address_array[i] = column_storage_address_array[i];
         }
-        cache_column_storage_address[column_size - 1] = column_storage_address;
+        cache_column_storage_address_array[column_size - 1] = column_storage_address;
 
         delete[] column_storage_address_array;
-        column_storage_address_array = cache_column_storage_address;
+        column_storage_address_array = cache_column_storage_address_array;
    
-        std::cout << "column end insert" << std::endl;
     }   
 
     /**
@@ -168,18 +185,14 @@ public:
 
         // Write the table type
         size_t table_type_size = sizeof(table_type);
-        // memcpy(buffer + offset, &table_type_size, sizeof(size_t));
-        // offset += sizeof(size_t);
         memcpy(buffer + offset, &table_type, table_type_size);
         offset += table_type_size;
 
-        // Write the column size
+        // Write the column amount
         memcpy(buffer + offset, &column_size, sizeof(default_amount_type));
         offset += sizeof(default_amount_type);
 
         // Write the column name array
-        memcpy(buffer + offset, &column_size, sizeof(default_amount_type));
-        offset += sizeof(default_amount_type);
         for (default_amount_type i = 0; i < column_size; ++i) {
             size_t column_name_size = column_name_array[i].size();
             memcpy(buffer + offset, &column_name_size, sizeof(size_t));
@@ -189,24 +202,24 @@ public:
         }
 
         // Write the column type array
-        memcpy(buffer + offset, &column_size, sizeof(default_amount_type));
-        offset += sizeof(default_amount_type);
         for (default_amount_type i = 0; i < column_size; ++i) {
             memcpy(buffer + offset, &column_type_array[i], sizeof(default_enum_type));
             offset += sizeof(default_enum_type);
         }
 
+        // Write the column length array
+        for (default_amount_type i = 0; i < column_size; ++i) {
+            memcpy(buffer + offset, &column_length_array[i], sizeof(default_length_size));
+            offset += sizeof(default_enum_type);
+        }
+
         // Write the column index type array
-        memcpy(buffer + offset, &column_size, sizeof(default_amount_type));
-        offset += sizeof(default_amount_type);
         for (default_amount_type i = 0; i < column_size; ++i) {
             memcpy(buffer + offset, &column_index_type_array[i], sizeof(default_enum_type));
             offset += sizeof(default_enum_type);
         }
 
         // Write the column storage address array
-        memcpy(buffer + offset, &column_size, sizeof(default_amount_type));
-        offset += sizeof(default_amount_type);
         for (default_amount_type i = 0; i < column_size; ++i) {
             memcpy(buffer + offset, &column_storage_address_array[i], sizeof(default_address_type));
             offset += sizeof(default_address_type);
@@ -233,12 +246,8 @@ public:
         offset += table_name_size;
 
         // Read the table type
-        // size_t table_type_size;
-        // memcpy(&table_type_size, buffer + offset, sizeof(size_t));
-        // offset += sizeof(size_t);
-        // table_type.resize(table_type_size);
-        memcpy(&table_type, buffer + offset, sizeof(table_type));
-        offset += sizeof(table_type);
+        memcpy(&table_type, buffer + offset, sizeof(default_enum_type));
+        offset += sizeof(default_enum_type);
 
         // Read the column size
         memcpy(&column_size, buffer + offset, sizeof(default_amount_type));
@@ -260,6 +269,13 @@ public:
         for (default_amount_type i = 0; i < column_size; ++i) {
             memcpy(&column_type_array[i], buffer + offset, sizeof(default_enum_type));
             offset += sizeof(default_enum_type);
+        }
+
+        // Read the column length array
+        column_length_array = new default_length_size[column_size];
+        for (default_amount_type i = 0; i < column_size; ++i) {
+            memcpy(&column_length_array[i], buffer + offset, sizeof(default_length_size));
+            offset += sizeof(default_length_size);
         }
 
         // Read the column index type array
