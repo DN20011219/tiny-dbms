@@ -132,7 +132,7 @@ public:
     */
     void WriteBackBlock(fstream& file_stream, default_address_type block_address, char* data)
     {   
-        std::cout << "WriteBackBlock address:" << block_address << std::endl;
+        // std::cout << "WriteBackBlock address:" << block_address << std::endl;
         default_length_size block_size = BLOCK_SIZE;
         file_stream.seekg(block_address * block_size, std::ios::beg);
         file_stream.write(data, block_size);
@@ -141,10 +141,9 @@ public:
 
     void ReadFromFile(fstream& file_stream, default_address_type block_address, char* data)
     {
-        std::cout << "ReadFromFile address:" << block_address << std::endl;
-        default_length_size block_size = BLOCK_SIZE;
-        file_stream.seekg(block_address * block_size, std::ios::beg);
-        file_stream.read(data, block_size);
+        // std::cout << "ReadFromFile address:" << block_address << std::endl;
+        file_stream.seekg(block_address * BLOCK_SIZE, std::ios::beg);
+        file_stream.read(data, BLOCK_SIZE);
     }
 private:
 

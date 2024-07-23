@@ -52,20 +52,20 @@ namespace tiny_v_dbms {
     }
 
     // create default db folder and file
-    void CreateBaseDB(const string& install_path) 
-    {   
-        FileManagement file_mm;
+    // void CreateBaseDB(const string& install_path) 
+    // {   
+    //     FileManagement file_mm;
 
-        // create folder
-        string folder_path = install_path + "/" + DEFAULT_DB_FOLDER_NAME;
-        file_mm.OpencvDirAndMkdir(folder_path);
+    //     // create folder
+    //     string folder_path = install_path + "/" + DEFAULT_DB_FOLDER_NAME;
+    //     file_mm.OpencvDirAndMkdir(folder_path);
 
-        // create db file
-        string file_path = folder_path + "/" + DEFAULT_DB_FILE_NAME;
-        string mock_write_data = "install_success";     // TODO:change it to a real db file
-        const char* data_pointer = mock_write_data.c_str();
-        file_mm.WriteFile(file_path, data_pointer, mock_write_data.length());
-    }
+    //     // create db file
+    //     string file_path = folder_path + "/" + DEFAULT_DB_FILE_NAME;
+    //     string mock_write_data = "install_success";     // TODO:change it to a real db file
+    //     const char* data_pointer = mock_write_data.c_str();
+    //     file_mm.WriteFile(file_path, data_pointer, mock_write_data.length());
+    // }
 
     void InstallDBMS() 
     {
@@ -76,6 +76,12 @@ namespace tiny_v_dbms {
         // empty means not installed
         if (install_path.length() != 0) {
             cout << "tiny-vector-dbms areadly installed in " << install_path << std::endl;
+
+            // install the default db
+            DBManagement db_mm;
+            db_mm.CreateBaseDB();
+
+            cout << "install successfully in: " << install_path << std::endl;
         }
         // try install tiny-vector-dbms
         else {
@@ -88,7 +94,7 @@ namespace tiny_v_dbms {
 
             // install the default db
             DBManagement db_mm;
-            db_mm.CreateDefaultDB();
+            db_mm.CreateSystemDB();
 
             cout << "install successfully in: " << install_path << std::endl;
         }
