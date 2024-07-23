@@ -87,6 +87,8 @@ public:
 
         if (column_size == 0)
         {   
+            column_size++;
+
             column_name_array = new string[1];
             column_name_array[0] = column_name;
 
@@ -171,7 +173,7 @@ public:
      * @return The length of the serialized data.
      */
     std::pair<char*, size_t> Serialize() {
-        size_t total_size = sizeof(string) * 2 + sizeof(default_amount_type) + (sizeof(string) + sizeof(default_enum_type) * 2 + sizeof(default_address_type)) * column_size;
+        size_t total_size = GetSize();
         char* buffer = new char[total_size];
 
         size_t offset = 0;
@@ -232,18 +234,20 @@ public:
      * @brief Deserialize a ColumnTable struct from a binary buffer.
      * 
      * @param buffer The binary buffer to read from.
-     * @param length The length of the binary buffer.
+     * @param read_offset Start read offset.
      */
-    void Deserialize(const char* buffer, size_t length) {
-        size_t offset = 0;
+    void Deserialize(const char* buffer, default_length_size read_offset) {
+        size_t offset = read_offset;
 
         // Read the table name
         size_t table_name_size;
         memcpy(&table_name_size, buffer + offset, sizeof(size_t));
+        std::cout << "table_name_size" << table_name_size << std::endl;
         offset += sizeof(size_t);
         table_name.resize(table_name_size);
         memcpy(&table_name[0], buffer + offset, table_name_size);
         offset += table_name_size;
+        std::cout << "table_name_size" << table_name << std::endl;
 
         // Read the table type
         memcpy(&table_type, buffer + offset, sizeof(default_enum_type));
@@ -251,6 +255,7 @@ public:
 
         // Read the column size
         memcpy(&column_size, buffer + offset, sizeof(default_amount_type));
+        std::cout << "column_size" << column_size << std::endl;
         offset += sizeof(default_amount_type);
 
         // Read the column name array

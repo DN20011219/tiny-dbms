@@ -84,7 +84,7 @@ public:
         // Check if the file path has the correct suffix
         string suffix = TABLE_FILE_SUFFIX;
         if ("." + file_path.substr(file_path.find_last_of(".") + 1) != suffix) {
-            throw std::runtime_error("Invalid file suffix. Expected:" + suffix + " but found" + file_path.substr(file_path.find_last_of(".") + 1));
+            throw std::runtime_error("Invalid file suffix. Expected:" + suffix + " but found: " + file_path.substr(file_path.find_last_of(".") + 1));
         }
 
         // Open the file in read-write mode
