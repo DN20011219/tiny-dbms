@@ -138,6 +138,10 @@ public:
         file_stream.write(data, block_size);
     }
 
+    default_address_type GetFileBlocksAmount(fstream& file_stream)
+    {
+        return file_stream.tellg() / BLOCK_SIZE;
+    }
 
     void ReadFromFile(fstream& file_stream, default_address_type block_address, char* data)
     {

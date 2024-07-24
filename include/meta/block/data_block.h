@@ -37,7 +37,7 @@ namespace tiny_v_dbms {
 
 using std::string; 
 
-struct Data_Block 
+struct DataBlock 
 {
 
 public:
@@ -51,9 +51,10 @@ public:
     // not serialize field
     char* data;                                 // data pointer in memory, used to visit memory
     
-    Data_Block(default_length_size item_length) {
+    DataBlock() {
         assert(default_pointer_size == sizeof(next_block_pointer));     // must be 32bit device to work
-        field_length = item_length;
+        
+        field_length = 0;
         field_data_nums = 0;
 
         // open one memory block, and make data* controlled by mm
@@ -61,7 +62,7 @@ public:
         mm->GetFreeTableBlock(data);
     }
 
-    ~Data_Block()
+    ~DataBlock()
     {
         std::cout << "delete data block!" << std::endl;
         
@@ -123,11 +124,11 @@ public:
     {
         size_t offset = 0;
 
-        // Read the table amount
+        // Read the field_length
         memcpy(&field_length, buffer + offset, sizeof(default_amount_type));
         offset += sizeof(default_amount_type);
 
-        // Read the free space
+        // Read the field_data_nums
         memcpy(&field_data_nums, buffer + offset, sizeof(default_amount_type));
         offset += sizeof(default_amount_type);
 
@@ -139,6 +140,21 @@ public:
         memcpy(&next_block_pointer, buffer + offset, sizeof(default_address_type));
 
     }
+
+    default_length_size GetSpaceCost()
+    {
+        return 2 * sizeof(default_length_size) + 2 * sizeof(default_address_type) + field_data_nums * field_length;
+    }
+
+    bool HaveSpace()
+    {
+        if (BLOCK_SIZE - GetSpaceCost() > field_length)
+        {
+            return true;
+        }
+        return false;
+    }
+
 };
 
 }

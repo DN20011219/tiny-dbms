@@ -9,10 +9,6 @@ install folder
 ----
 
 
-
-
-
-
 */
 
 #ifndef VDBMS_BENCH_DB_MANAGEMENT_H_
@@ -26,7 +22,9 @@ install folder
 #include "../memory/memory_management.h"
 #include "../meta/table/column_table.h"
 #include "../meta/block/table_block.h"
+#include "../meta/block/data_block.h"
 #include "../storage/table_file_management.h"
+#include "../storage/block_file_management.h"
 
 namespace tiny_v_dbms {
 
@@ -53,7 +51,7 @@ private:
      */ 
     string GetBaseDbFolder()
     {
-        return GetOrCreateDbFolder(DEFAULT_DB_FOLDER_NAME);
+        return GetAndCreateDbFolder(DEFAULT_DB_FOLDER_NAME);
     }
 
     /**
@@ -61,7 +59,7 @@ private:
      * @param db_path db folder path
      * @return  The folder where installed input db.
      */
-    string GetOrCreateDbFolder(string db_name)
+    string GetAndCreateDbFolder(string db_name)
     {
         string db_folder = GetInstallPath() + "/" + db_name;
         file_mm->OpencvDirAndMkdir(db_folder);
@@ -73,10 +71,10 @@ private:
      * @param db_name db name
      * @return  The path where is he db file of input db.
      */
-    string GetOrCreateDefaultDbFile(string db_name)
+    string GetAndCreateDefaultDbFile(string db_name)
     {   
         // create db file, db file has the same name as db folder
-        string db_file_name = GetOrCreateDbFolder(db_name) + "/" + DEFAULT_DB_FILE_NAME + DB_FILE_SUFFIX;
+        string db_file_name = GetAndCreateDbFolder(db_name) + "/" + DEFAULT_DB_FILE_NAME + DB_FILE_SUFFIX;
         file_mm->ReadOrCreateFile(db_file_name).close();
         return db_file_name;
     }
@@ -104,6 +102,52 @@ private:
         string default_table_header_uri = tables_path + "/" + DEFAULT_TABLE_NAME + TABLE_FILE_SUFFIX;
         file_mm->ReadOrCreateFile(default_table_header_uri).close();
         return default_table_header_uri;
+    }
+
+    /**
+     * Reads a table block from a file
+     * @param table_file_uri The URI of the table file
+     * @param offset The offset of the block in the file
+     * @param new_block The TableBlock object to store the read data
+    */
+    void ReadOneTableBlock(string table_file_uri, default_address_type offset, TableBlock& new_block)
+    {
+        BlockFileManagement bfmm;
+        fstream file_stream;
+        bfmm.OpenTableFile(table_file_uri, file_stream);    // open table header file, like "test.tvdbb"
+        bfmm.ReadFromFile(file_stream, offset, new_block.data);
+        new_block.DeserializeFromBuffer(new_block.data);
+    }
+
+    /**
+     * Reads a data block from a file
+     * @param data_file_uri The URI of the data file
+     * @param offset The offset of the block in the file
+     * @param new_block The DataBlock object to store the read data
+    */
+    void ReadOneDataBlock(string data_file_uri, default_address_type offset, DataBlock& new_block)
+    {
+        BlockFileManagement bfmm;
+        fstream file_stream;
+        bfmm.OpenDataFile(data_file_uri, file_stream);    // open table header file, like "test.data"
+        bfmm.ReadFromFile(file_stream, offset, new_block.data);
+        new_block.DeserializeFromBuffer(new_block.data);
+    }
+
+    void WriteBackTableBlock(string table_file_uri, default_address_type offset, DataBlock& block)
+    {
+        BlockFileManagement bfmm;
+        fstream file_stream;
+        bfmm.OpenTableFile(table_file_uri, file_stream);   // open table header file, like "test.tvdbb"   
+        bfmm.WriteBackBlock(file_stream, offset, block.data);
+    }
+
+    void WriteBackDataBlock(string data_file_uri, default_address_type offset, DataBlock& block)
+    {
+        BlockFileManagement bfmm;
+        fstream file_stream;
+        bfmm.OpenDataFile(data_file_uri, file_stream);    // open data file, like "test.data"   
+        bfmm.WriteBackBlock(file_stream, offset, block.data);
     }
 
 public:
@@ -142,7 +186,7 @@ public:
         string db_path_uri = GetBaseDbFolder();
 
         // 2、create db header file
-        string db_file_uri = GetOrCreateDefaultDbFile(DEFAULT_DB_FOLDER_NAME);
+        string db_file_uri = GetAndCreateDefaultDbFile(DEFAULT_DB_FOLDER_NAME);
 
         // 3、write data into db header file
         DB default_db;
@@ -152,18 +196,18 @@ public:
         SerializeDBFile(default_db, db_file_uri);
     }
 
-    // for sql : CREATE TABLE db_name FROM table_name
+    // for sql : USE db_name CREATE TABLE table_name
     void CreateTable(string db_name, string table_name)
     {
         // TODO: 
     }
     
-    // for sql : CREATE TABLE db_name FROM table_name
+    // for sql : CREATE DATABASE db_name;
     void CreateDefaultTable(string db_name)
     {
         // TODO:
     }
-
+    
     // create a special default table for base db, this table will store all db's name.
     void CreateDefaultTableForBaseDb()
     {
@@ -214,8 +258,8 @@ public:
         ColumnTable new_ct;
         new_ct.Deserialize(new_block.data, new_block.tables_begin_address[new_block.table_amount - 1]);
         assert(new_ct.column_size == 1);
-        assert(new_ct.column_name_array[new_ct.column_size - 1] == DEFAULT_TABLE_COLUMN_NAME_ONE);
-        assert(new_ct.column_storage_address_array[new_ct.column_size - 1] == 0);
+        assert(new_ct.columns.column_name_array[new_ct.column_size - 1] == DEFAULT_TABLE_COLUMN_NAME_ONE);
+        assert(new_ct.columns.column_storage_address_array[new_ct.column_size - 1] == 0);
         // cout 
         // << "-----Deserialize table header data-----"
         // << endl
@@ -228,37 +272,87 @@ public:
         // << endl
         // << "--------Deserialize table block data--------"
         // << endl;
+
+        string db_name = DEFAULT_DB_FOLDER_NAME;
+        char* deafult_db_name = new char[new_ct.columns.column_length_array[new_ct.column_size - 1]];
+        strcpy(deafult_db_name, db_name.c_str());
+        
+        // INSERT INTO default_table(db_names) VALUES (data) FROM base_db
+        InsertIntoTable(DEFAULT_DB_FOLDER_NAME, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, deafult_db_name);
     }
 
-
-    // for sql: INSERT INTO table_name(column_name) VALUES (data);
+    // for sql: INSERT INTO table_name(column_name) VALUES (data) ;
     void InsertIntoTable(string db_name, string table_name, string column_name, char* data)
-    {
-        // // open db file, like "db.tvdbb", and deserialize to get default table name
-        // string db_file_name = GetOrCreateDbFolder(db_name) + db_name + DB_FILE_SUFFIX;
-        // DB db_file;
-        // DeserializeDBFile(db_file, db_file_name);
+    {   
+        // check table and column exists.
+        ColumnTable table;
+        if (!CheckTableExist(db_name, table_name, table)) 
+        {
+            throw std::runtime_error("table: " + table_name + " not exist in db: " + db_name);
+        }
 
-        // // open default table file, like "default_table.tvdbb"
-        // TableBlock block;
-        // TableFileManagement tfmm;
-        // fstream table_header_file_stream;
-        // tfmm.OpenDataFile(db_file.db_all_tables_path, table_header_file_stream); // open file
-        // tfmm.ReadFromFile(table_header_file_stream, 0, block.data);  // read a block
-        // block.DeserializeFromBuffer(block.data); // deserialize data
+        Columns column;
+        if (!CheckColumnExist(table, column_name, column)) 
+        {
+            throw std::runtime_error("column: " + column_name + "not exists in table: " + table_name);
+        }
 
-        // // deserialize the first table in tables block
-        // ColumnTable default_table;
-        // default_table.Deserialize(block.data, block.tables_begin_address[0]);
+        // open a data block
+        DataBlock data_block;
+        string data_file_uri = GetAndCreateDataFile(GetAndCreateDataFolderPath(GetAndCreateDbFolder(db_name)), table_name);
 
-        // 
+        default_address_type read_offset = column.column_storage_address_array[0];
+        ReadOneDataBlock(data_file_uri, read_offset, data_block);
+
+        // get one data block has space
+        while (!data_block.HaveSpace())
+        {   
+            read_offset = data_block.next_block_pointer;
+
+            // if has no next block, then create one new block to store
+            if (read_offset == 0x0)
+            {
+                BlockFileManagement bfmm;
+                read_offset = bfmm.GetNewBlockAddress(data_file_uri);
+            }
+
+            ReadOneDataBlock(data_file_uri, read_offset, data_block);
+        }
+
+        // insert data
+        data_block.InsertData(data);
+
+        // write back
+        WriteBackDataBlock(data_file_uri, read_offset, data_block);
     }
 
-    // check table exist in db, if not exist, then throw error. Or return it.
-    ColumnTable CheckTableExist(string db_name, string table_name)
+    // for sql: SELECT column_name FROM table_name
+    void SelectFromTable(string db_name, string table_name, string column_name, DataBlock& block)
+    {
+
+    }
+
+    /**
+     * Checks if a table exists in a database.
+     *
+     * @param db_name The name of the database.
+     * @param table_name The name of the table to check.
+     * @param table A reference to a ColumnTable object that will be populated with the table's metadata if it exists.
+     *
+     * @return True if the table exists, false otherwise.
+     *
+     * @example
+     * ColumnTable table;
+     * if (CheckTableExist("my_database", "my_table", table)) {
+     *     std::cout << "Table exists!" << std::endl;
+     * } else {
+     *     std::cout << "Table does not exist." << std::endl;
+     * }
+    */
+    bool CheckTableExist(string db_name, string table_name, ColumnTable& table)
     {
         // open db file, like "db.tvdbb", and deserialize to get default table name
-        string db_file_name = GetOrCreateDbFolder(db_name) + db_name + DB_FILE_SUFFIX;
+        string db_file_name = GetAndCreateDbFolder(db_name) + db_name + DB_FILE_SUFFIX;
         DB db_file;
         DeserializeDBFile(db_file, db_file_name);
 
@@ -266,27 +360,76 @@ public:
         TableBlock block;
         TableFileManagement tfmm;
         fstream table_header_file_stream;
-        tfmm.OpenDataFile(db_file.db_all_tables_path, table_header_file_stream); // open file
-        tfmm.ReadFromFile(table_header_file_stream, 0, block.data);  // read a block
-        block.DeserializeFromBuffer(block.data); // deserialize data
-
-        // deserialize the first table in tables block
-        for (default_amount_type i = 0; i < block.table_amount; i++)
+        tfmm.OpenDataFile(db_file.db_all_tables_path, table_header_file_stream); // open db headers file
+        
+        // search total file, until it is end or found target table.
+        default_address_type i = 0;
+        default_address_type blocks_amount = tfmm.GetFileBlocksAmount(table_header_file_stream);
+        while (i < blocks_amount)
         {
-            ColumnTable table;
-            table.Deserialize(block.data, block.tables_begin_address[i]);
-            if (table.table_name == table_name)
+            tfmm.ReadFromFile(table_header_file_stream, 0, block.data);  // read a block
+            block.DeserializeFromBuffer(block.data); // deserialize data
+
+            // deserialize the first table in tables block
+            for (default_amount_type i = 0; i < block.table_amount; i++)
             {
-                return table;
+                table.Deserialize(block.data, block.tables_begin_address[i]);
+                if (table.table_name == table_name)
+                {
+                    return true;
+                }
             }
+
+            i++;
         }
         
-        throw std::runtime_error("Can not find table" + table_name + "in db " + db_name);
+        return false;
+        // throw std::runtime_error("Can not find table" + table_name + "in db " + db_name);
     }
 
-    bool CheckColumnExist()
+    /**
+     * Checks if a column exists in a table.
+     *
+     * @param ct The ColumnTable object that contains the table's metadata.
+     * @param column_name The name of the column to check.
+     * @param column A reference to a Columns object that will be populated with the column's metadata if it exists.
+     *
+     * @return True if the column exists, false otherwise.
+     *
+     * @example
+     * ColumnTable table;
+     * Columns column;
+     * if (CheckColumnExist(table, "my_column", column)) {
+     *     std::cout << "Column exists!" << std::endl;
+     *     std::cout << "Column name: " << column.column_name_array[0] << std::endl;
+     *     std::cout << "Column type: " << column.column_type_array[0] << std::endl;
+     * } else {
+     *     std::cout << "Column does not exist." << std::endl;
+     * }
+    */
+    bool CheckColumnExist(ColumnTable ct, string column_name, Columns& column)
     {
-        
+        for (default_amount_type i = 0; i < ct.column_size; i++)
+        {   
+            if (ct.columns.column_name_array[i] == column_name)
+            {   
+                column.column_name_array = new string[0];
+                column.column_name_array[0] = ct.columns.column_name_array[i];
+                column.column_type_array = new default_enum_type[0];
+                column.column_type_array[0] = ct.columns.column_type_array[i];
+                column.column_length_array = new default_length_size[0];
+                column.column_length_array[0] = ct.columns.column_length_array[i];
+                column.column_index_type_array = new default_enum_type[0];
+                column.column_index_type_array[0] = ct.columns.column_index_type_array[i];
+                column.column_storage_address_array = new default_address_type[0];
+                column.column_storage_address_array[0] = ct.columns.column_storage_address_array[i];
+
+                return true;
+            }
+            
+        }
+
+        return false;
     }
 
 public:
@@ -369,7 +512,7 @@ public:
      * @param table_path db folder path
      * @return default table data folder path of the input db path.
      */
-    string GetAndCreateDataFolderPath(string& db_path)
+    string GetAndCreateDataFolderPath(string db_path)
     {   
         string table_path = GetDefaultTablePath(db_path);
         string default_table_data_folder = table_path + "/" + DEFAULT_TABLE_DATA_FOLDER;
@@ -383,7 +526,7 @@ public:
      * @param table_name table name
      * @return data file path of input table_name
      */
-    string GetAndCreateDataFile(string& data_folder_path, string& table_name)
+    string GetAndCreateDataFile(string data_folder_path, string table_name)
     {
         string table_data_file = data_folder_path;
         table_data_file += "/";

@@ -23,6 +23,7 @@ column_storage_address_array.             such as |0x0000|
 #include <string>
 
 #include "../../config.h" 
+#include "../column/column_array.h"
 
 namespace tiny_v_dbms {
 
@@ -37,11 +38,15 @@ public:
     default_enum_type table_type;
     default_amount_type column_size;                      // amount of column
 
-    string* column_name_array;                            // names of each column
-    default_enum_type* column_type_array;                 // type of each column
-    default_length_size* column_length_array;                   // space cost of each column
-    default_enum_type* column_index_type_array;           // index type of each column
-    default_address_type* column_storage_address_array;   // where to store each column, is the address of first block number in table data file
+    // struct Columns {
+    //     string* column_name_array;                            // names of each column
+    //     default_enum_type* column_type_array;                 // type of each column
+    //     default_length_size* column_length_array;                   // space cost of each column
+    //     default_enum_type* column_index_type_array;           // index type of each column
+    //     default_address_type* column_storage_address_array;   // where to store each column, is the address of first block number in table data file
+    // } columns;
+
+    Columns columns;
 
     ColumnTable()
     {
@@ -89,20 +94,20 @@ public:
         {   
             column_size++;
 
-            column_name_array = new string[1];
-            column_name_array[0] = column_name;
+            columns.column_name_array = new string[1];
+            columns.column_name_array[0] = column_name;
 
-            column_type_array = new default_enum_type[1];
-            column_type_array[0] = column_type;
+            columns.column_type_array = new default_enum_type[1];
+            columns.column_type_array[0] = column_type;
 
-            column_length_array = new default_length_size[1];
-            column_length_array[0] = column_length;
+            columns.column_length_array = new default_length_size[1];
+            columns.column_length_array[0] = column_length;
 
-            column_index_type_array = new default_enum_type[1];
-            column_index_type_array[0] = column_index_type; 
+            columns.column_index_type_array = new default_enum_type[1];
+            columns.column_index_type_array[0] = column_index_type; 
 
-            column_storage_address_array = new default_address_type[1];
-            column_storage_address_array[0] = column_storage_address; // TODO:IMP get address from data file management
+            columns.column_storage_address_array = new default_address_type[1];
+            columns.column_storage_address_array[0] = column_storage_address; // TODO:IMP get address from data file management
 
             return;
         }
@@ -113,56 +118,56 @@ public:
         string* cache_column_name_array = new string[column_size];
         for (int i = 0; i < column_size - 1; i++)
         {
-            cache_column_name_array[i] = column_name_array[i];
+            cache_column_name_array[i] = columns.column_name_array[i];
         }
         cache_column_name_array[column_size - 1] = column_name;
 
-        delete[] column_name_array;
-        column_name_array = cache_column_name_array;
+        delete[] columns.column_name_array;
+        columns.column_name_array = cache_column_name_array;
 
         // Update the column type array
         default_enum_type* cache_column_type_array = new default_enum_type[column_size];
         for (int i = 0; i < column_size - 1; i++)
         {
-            cache_column_type_array[i] = column_type_array[i];
+            cache_column_type_array[i] = columns.column_type_array[i];
         }
         cache_column_type_array[column_size - 1] = column_type;
 
-        delete[] column_type_array;
-        column_type_array = cache_column_type_array;
+        delete[] columns.column_type_array;
+        columns.column_type_array = cache_column_type_array;
 
         // update column length array
         default_length_size* cache_column_length_array = new default_length_size[column_size];
         for (int i = 0; i < column_size - 1; i++)
         {
-            cache_column_length_array[i] = column_length_array[i];
+            cache_column_length_array[i] = columns.column_length_array[i];
         }
         cache_column_length_array[column_size - 1] = column_length;
 
-        delete[] column_length_array;
-        column_length_array = cache_column_length_array;
+        delete[] columns.column_length_array;
+        columns.column_length_array = cache_column_length_array;
     
         // Update the column index type array
         default_enum_type* cache_column_index_type_array = new default_enum_type[column_size];
         for (int i = 0; i < column_size - 1; i++)
         {
-            cache_column_index_type_array[i] = column_index_type_array[i];
+            cache_column_index_type_array[i] = columns.column_index_type_array[i];
         }
         cache_column_index_type_array[column_size - 1] = column_index_type;
 
-        delete[] column_index_type_array;
-        column_index_type_array = cache_column_index_type_array;
+        delete[] columns.column_index_type_array;
+        columns.column_index_type_array = cache_column_index_type_array;
 
         // Update the column storage address array
         default_address_type* cache_column_storage_address_array = new default_address_type[column_size];
         for (int i = 0; i < column_size - 1; i++)
         {
-            cache_column_storage_address_array[i] = column_storage_address_array[i];
+            cache_column_storage_address_array[i] = columns.column_storage_address_array[i];
         }
         cache_column_storage_address_array[column_size - 1] = column_storage_address;
 
-        delete[] column_storage_address_array;
-        column_storage_address_array = cache_column_storage_address_array;
+        delete[] columns.column_storage_address_array;
+        columns.column_storage_address_array = cache_column_storage_address_array;
    
     }   
 
@@ -196,34 +201,34 @@ public:
 
         // Write the column name array
         for (default_amount_type i = 0; i < column_size; ++i) {
-            size_t column_name_size = column_name_array[i].size();
+            size_t column_name_size = columns.column_name_array[i].size();
             memcpy(buffer + offset, &column_name_size, sizeof(size_t));
             offset += sizeof(size_t);
-            memcpy(buffer + offset, column_name_array[i].c_str(), column_name_size);
+            memcpy(buffer + offset, columns.column_name_array[i].c_str(), column_name_size);
             offset += column_name_size;
         }
 
         // Write the column type array
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(buffer + offset, &column_type_array[i], sizeof(default_enum_type));
+            memcpy(buffer + offset, &columns.column_type_array[i], sizeof(default_enum_type));
             offset += sizeof(default_enum_type);
         }
 
         // Write the column length array
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(buffer + offset, &column_length_array[i], sizeof(default_length_size));
+            memcpy(buffer + offset, &columns.column_length_array[i], sizeof(default_length_size));
             offset += sizeof(default_enum_type);
         }
 
         // Write the column index type array
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(buffer + offset, &column_index_type_array[i], sizeof(default_enum_type));
+            memcpy(buffer + offset, &columns.column_index_type_array[i], sizeof(default_enum_type));
             offset += sizeof(default_enum_type);
         }
 
         // Write the column storage address array
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(buffer + offset, &column_storage_address_array[i], sizeof(default_address_type));
+            memcpy(buffer + offset, &columns.column_storage_address_array[i], sizeof(default_address_type));
             offset += sizeof(default_address_type);
         }
 
@@ -259,41 +264,41 @@ public:
         offset += sizeof(default_amount_type);
 
         // Read the column name array
-        column_name_array = new string[column_size];
+        columns.column_name_array = new string[column_size];
         for (default_amount_type i = 0; i < column_size; ++i) {
             size_t column_name_size;
             memcpy(&column_name_size, buffer + offset, sizeof(size_t));
             offset += sizeof(size_t);
-            column_name_array[i].resize(column_name_size);
-            memcpy(&column_name_array[i][0], buffer + offset, column_name_size);
+            columns.column_name_array[i].resize(column_name_size);
+            memcpy(&columns.column_name_array[i][0], buffer + offset, column_name_size);
             offset += column_name_size;
         }
 
         // Read the column type array
-        column_type_array = new default_enum_type[column_size];
+        columns.column_type_array = new default_enum_type[column_size];
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(&column_type_array[i], buffer + offset, sizeof(default_enum_type));
+            memcpy(&columns.column_type_array[i], buffer + offset, sizeof(default_enum_type));
             offset += sizeof(default_enum_type);
         }
 
         // Read the column length array
-        column_length_array = new default_length_size[column_size];
+        columns.column_length_array = new default_length_size[column_size];
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(&column_length_array[i], buffer + offset, sizeof(default_length_size));
+            memcpy(&columns.column_length_array[i], buffer + offset, sizeof(default_length_size));
             offset += sizeof(default_length_size);
         }
 
         // Read the column index type array
-        column_index_type_array = new default_enum_type[column_size];
+        columns.column_index_type_array = new default_enum_type[column_size];
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(&column_index_type_array[i], buffer + offset, sizeof(default_enum_type));
+            memcpy(&columns.column_index_type_array[i], buffer + offset, sizeof(default_enum_type));
             offset += sizeof(default_enum_type);
         }
 
         // Read the column storage address array
-        column_storage_address_array = new default_address_type[column_size];
+        columns.column_storage_address_array = new default_address_type[column_size];
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(&column_storage_address_array[i], buffer + offset, sizeof(default_address_type));
+            memcpy(&columns.column_storage_address_array[i], buffer + offset, sizeof(default_address_type));
             offset += sizeof(default_address_type);
         }
     }

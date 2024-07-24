@@ -4,8 +4,8 @@
 // since : 2024-07-22
 // desc  : Read or write file using block as unit.
 
-#ifndef VDBMS_STORAGE_TABLE_FILE_MANAGEMENT_H_
-#define VDBMS_STORAGE_TABLE_FILE_MANAGEMENT_H_
+#ifndef VDBMS_STORAGE_BLOCK_FILE_MANAGEMENT_H_
+#define VDBMS_STORAGE_BLOCK_FILE_MANAGEMENT_H_
 
 #include <string>
 #include <iostream>
@@ -96,6 +96,14 @@ public:
         }
     }
 
+    void OpenFileWithoutCheck(string file_path, fstream& file_stream)
+    {
+        file_stream.open(file_path, std::ios::in | std::ios::out);
+                if (!file_stream.is_open()) {
+            throw std::runtime_error("Failed to open file: " + file_path);
+        }
+    }
+
     /**
      * Reads a block of data from a file stream.
      * 
@@ -146,6 +154,13 @@ public:
         return file_stream.tellg() / block_size;
     }
 
+    default_address_type GetNewBlockAddress(string file_uri)
+    {
+        fstream stream;
+        OpenFileWithoutCheck(file_uri, stream);
+        return stream.tellg() / BLOCK_SIZE;
+    }
+
     /**
      * Writes a block of data to a file stream.
      * 
@@ -186,4 +201,4 @@ private:
 
 }
 
-#endif // VDBMS_STORAGE_TABLE_FILE_MANAGEMENT_H_
+#endif // VDBMS_STORAGE_BLOCK_FILE_MANAGEMENT_H_
