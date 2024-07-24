@@ -47,6 +47,8 @@ namespace tiny_v_dbms {
 
         // BlockReplacer replacer_two(table_memory_blocks, max_table_block_amount, free_table_blocks, using_table_blocks);
         table_replacer = new BlockReplacer(table_memory_blocks, max_table_block_amount, free_table_blocks, using_table_blocks);
+
+        std::cout << "SingleInstance MemoryManagement end create" << std::endl;
     }
 
 

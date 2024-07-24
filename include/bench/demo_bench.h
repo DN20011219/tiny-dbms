@@ -79,7 +79,7 @@ namespace tiny_v_dbms {
 
             // install the default db
             DBManagement db_mm;
-            db_mm.CreateBaseDB();
+            db_mm.CreateSystemDB();
 
             cout << "install successfully in: " << install_path << std::endl;
         }

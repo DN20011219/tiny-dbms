@@ -89,7 +89,7 @@ public:
     // use replacer to get a free table block
     void GetFreeTableBlock(char*& data)
     {       
-        std::cout << "try get one block on mem" << std::endl;
+        // std::cout << "try get one block on mem" << std::endl;
         if (!table_replacer->GetFreeBlock(data))
         {   
             throw std::runtime_error("No enough space");

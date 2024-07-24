@@ -52,7 +52,7 @@ public:
 
     TableBlock()
     {
-        std::cout << "init one table block begin" << std::endl;
+        // std::cout << "init one table block begin" << std::endl;
         table_amount = 0;
         CalAndUpdateFreeSpace();
         next_block_pointer = 0x0;
@@ -64,19 +64,19 @@ public:
         MemoryManagement* mm = MemoryManagement::GetInstance();
         mm->GetFreeTableBlock(data);
 
-        std::cout << "init one table block end" << std::endl;
+        // std::cout << "init one table block end" << std::endl;
     }
 
     ~TableBlock()
     {
-        std::cout << "delete table block!" << std::endl;
+        // std::cout << "delete table block!" << std::endl;
         
         MemoryManagement* mm = MemoryManagement::GetInstance();
         mm->ReleaseBlock(data);
 
         delete[] tables_begin_address;
 
-        std::cout << "delete table block end!" << std::endl;
+        // std::cout << "delete table block end!" << std::endl;
     }
     
     void CalAndUpdateFreeSpace()
@@ -98,43 +98,36 @@ public:
         if (table_amount == 0)
         {
             address = BLOCK_SIZE;
-            address -= table->GetSize();
+            address -= table->Serialize().second;
             return true;
         }
 
-        address = tables_begin_address[table_amount - 1] - table->GetSize();
+        address = tables_begin_address[table_amount - 1] - table->Serialize().second;
 
         // if this block has no space to contain this table
-        if (address < sizeof(default_amount_type) + sizeof(default_length_size) + sizeof(default_address_type) + table_amount * sizeof(default_address_type))
+        if (address >= sizeof(default_amount_type) + sizeof(default_length_size) + sizeof(default_address_type) + table_amount * sizeof(default_address_type))
         {
-            return false;
+            return true;
         }
-        return true;
+
+        return false;
     }
 
     void InsertTable(ColumnTable* table)
     {   
-        // std::cout << "begin insert table " << std::endl;
+        std::cout << "begin insert table " << std::endl;
         default_address_type insert_address;
         if (table_amount == 0)
         {   
-            // std::cout << "first insert table " << std::endl;
             if (CalBeginAddress(table, insert_address))
             {  
-                // std::cout << "update block header" << std::endl;
-                
                 table_amount++;
                 tables_begin_address = new default_address_type[1];
                 tables_begin_address[0] = insert_address;
-
-                // write in memory block
-                std::cout << "write address: " << insert_address << " length: "<< table->Serialize().second << std::endl;
-                std::cout << "data pointer before write:" << (void *)data << std::endl;
-
+                cout << "insert_address: " << insert_address << endl;
                 memcpy(data + insert_address, table->Serialize().first, table->Serialize().second);
-                
+                cout << "insert_ data: " << data[insert_address] << data[insert_address + 1] << endl;
                 SerializeHeader();
-                std::cout << "write result: " << (size_t)data[4044] << std::endl;
             }
             else
             {
@@ -150,6 +143,7 @@ public:
             default_address_type* cache_address = new default_address_type[table_amount];
             memcpy(cache_address, tables_begin_address, (table_amount - 2));
             cache_address[table_amount - 1] = insert_address;
+            delete[] tables_begin_address;
             tables_begin_address = cache_address;
 
             // write in memory block
@@ -162,18 +156,13 @@ public:
         }
 
         SerializeHeader();
-        std::cout << "insert table end" << std::endl;
+        // std::cout << "insert table end" << std::endl;
     }
 
     /**
      * @brief Serialize the TableBlock struct to a binary buffer which is controlled by mm.
-     * 
-     * @return A pointer to the serialized data.
-     * @return The length of the serialized data.
      */
     void SerializeHeader() {
-        size_t len = BLOCK_SIZE;
-
         size_t offset = 0;
 
         // Write the table amount
