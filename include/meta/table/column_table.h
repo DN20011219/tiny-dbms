@@ -61,9 +61,9 @@ public:
     /**
     * @brief return the space cost of this table header.
     */
-    default_length_size GetSize() {
-        return sizeof(string) * 2 + sizeof(default_amount_type) + (sizeof(string) + sizeof(default_enum_type) * 2 + sizeof(default_address_type)) * column_size;
-    }
+    // default_length_size GetSize() {
+    //     return sizeof(string) * 2 + sizeof(default_amount_type) + (sizeof(string) + sizeof(default_enum_type) * 2 + sizeof(default_address_type)) * column_size;
+    // }
 
     /**
      * Inserts a new column into the table.
@@ -178,7 +178,7 @@ public:
      * @return The length of the serialized data.
      */
     std::pair<char*, size_t> Serialize() {
-        size_t total_size = GetSize();
+        size_t total_size = BLOCK_SIZE / 4;     // max size is BLOCK_SIZE / 4
         char* buffer = new char[total_size];
 
         size_t offset = 0;
@@ -232,7 +232,7 @@ public:
             offset += sizeof(default_address_type);
         }
 
-        return std::make_pair(buffer, total_size);
+        return std::make_pair(buffer, offset);
     }
 
     /**
@@ -247,12 +247,12 @@ public:
         // Read the table name
         size_t table_name_size;
         memcpy(&table_name_size, buffer + offset, sizeof(size_t));
-        std::cout << "table_name_size" << table_name_size << std::endl;
+        // std::cout << "table_name_size" << table_name_size << std::endl;
         offset += sizeof(size_t);
         table_name.resize(table_name_size);
         memcpy(&table_name[0], buffer + offset, table_name_size);
         offset += table_name_size;
-        std::cout << "table_name_size" << table_name << std::endl;
+        // std::cout << "table_name_size" << table_name << std::endl;
 
         // Read the table type
         memcpy(&table_type, buffer + offset, sizeof(default_enum_type));
@@ -260,7 +260,7 @@ public:
 
         // Read the column size
         memcpy(&column_size, buffer + offset, sizeof(default_amount_type));
-        std::cout << "column_size" << column_size << std::endl;
+        // std::cout << "column_size" << column_size << std::endl;
         offset += sizeof(default_amount_type);
 
         // Read the column name array

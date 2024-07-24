@@ -89,9 +89,10 @@ public:
 
     void InsertData(char* insert_data)
     {   
+        field_data_nums++;
         default_address_type address;
         if (CalBeginAddress(address))
-        {
+        {   
             memcpy(data + address, insert_data, field_length);
         }
         else{
@@ -103,11 +104,11 @@ public:
     void Serialize() const {
         size_t offset = 0;
 
-        memcpy(data + offset, &field_length, sizeof(default_amount_type));
-        offset += sizeof(default_amount_type);
+        memcpy(data + offset, &field_length, sizeof(default_length_size));
+        offset += sizeof(default_length_size);
 
-        memcpy(data + offset, &field_data_nums, sizeof(default_amount_type));
-        offset += sizeof(default_amount_type);
+        memcpy(data + offset, &field_data_nums, sizeof(default_length_size));
+        offset += sizeof(default_length_size);
 
         memcpy(data + offset, &pre_block_pointer, sizeof(default_address_type));
         offset += sizeof(default_address_type);
@@ -125,12 +126,12 @@ public:
         size_t offset = 0;
 
         // Read the field_length
-        memcpy(&field_length, buffer + offset, sizeof(default_amount_type));
-        offset += sizeof(default_amount_type);
+        memcpy(&field_length, buffer + offset, sizeof(default_length_size));
+        offset += sizeof(default_length_size);
 
         // Read the field_data_nums
-        memcpy(&field_data_nums, buffer + offset, sizeof(default_amount_type));
-        offset += sizeof(default_amount_type);
+        memcpy(&field_data_nums, buffer + offset, sizeof(default_length_size));
+        offset += sizeof(default_length_size);
 
         // Read the pre block pointer
         memcpy(&pre_block_pointer, buffer + offset, sizeof(default_address_type));

@@ -47,7 +47,7 @@ public:
             std::pair<char*, MemoryBlock*> pair(data, &blocks[max_block_amount]);
             data_block_map.insert(pair);
         }
-        std::cout << "init free_blocks size: " << free_blocks.size() << std::endl;
+        // std::cout << "init free_blocks size: " << free_blocks.size() << std::endl;
     }
 
     // if has one free block, return true and change data to the data pointer of free block, at the same time change the information on block.

@@ -28,6 +28,14 @@ class BlockFileManagement
 {
 public:
 
+    default_address_type GetFileBlocksAmount(string file_uri)
+    {
+        fstream file_stream;
+        file_stream.open(file_uri, std::ios::in | std::ios::out);
+        file_stream.seekg(0, std::ios::end);
+        return file_stream.tellg() / BLOCK_SIZE;
+    }
+
     /**
      * Opens a data file and returns a stream to read from and write to it.
      * 
@@ -75,12 +83,12 @@ public:
      * ```cpp
      * string file_path = "example.tvdbb";
      * fstream file_stream;
-     * OpenDataFile(file_path, file_stream);
+     * OpenTableFile(file_path, file_stream);
      * ```
     */
-    void OpenTableFile(string& file_path, fstream& file_stream)
+    void OpenTableFile(string file_path, fstream& file_stream)
     {   
-        std::cout << "OpenDataFile: " << file_path << std::endl;
+        std::cout << "OpenTableFile: " << file_path << std::endl;
         // Check if the file path has the correct suffix
         string suffix = TABLE_FILE_SUFFIX;
         if ("." + file_path.substr(file_path.find_last_of(".") + 1) != suffix) {
@@ -181,15 +189,14 @@ public:
     */
     void WriteBackBlock(fstream& file_stream, default_address_type block_address, char* data)
     {   
-        std::cout << "WriteBackBlock address:" << block_address << std::endl;
-        default_length_size block_size = BLOCK_SIZE;
-        file_stream.seekg(block_address * block_size, std::ios::beg);
-        file_stream.write(data, block_size);
+        file_stream.seekg(block_address * BLOCK_SIZE, std::ios::beg);
+        file_stream.write(data, BLOCK_SIZE);
+        std::cout << "write back block success : " << data[0] << std::endl;
     }
 
     void ReadFromFile(fstream& file_stream, default_address_type block_address, char* data)
     {
-        std::cout << "ReadFromFile address:" << block_address << std::endl;
+        // std::cout << "ReadFromFile address:" << block_address << std::endl;
         default_length_size block_size = BLOCK_SIZE;
         file_stream.seekg(block_address * block_size, std::ios::beg);
         file_stream.read(data, block_size);
