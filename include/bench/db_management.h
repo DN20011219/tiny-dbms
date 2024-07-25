@@ -259,6 +259,8 @@ public:
         bfmm->OpenTableFile(default_table_file_uri, file_stream);    // open table header file, like "test.tvdbb"
         // default_address_type free_address = bfmm->GetNewBlockAddress(file_stream);    // get free block address in file
         bfmm->WriteBackBlock(file_stream, 0, block.data);
+        file_stream.close();
+        // cout << "table amount in block is: " << (default_amount_type)block.data[0] << endl;
 
         // Test deserialize from file: read from file and deserialize, this default block is at 0 offset
         // TableBlock new_block;
@@ -409,6 +411,7 @@ public:
         for (default_amount_type i = 0; i < block.table_amount; i++)
         {
             table.Deserialize(block.data, block.tables_begin_address[i]);
+            cout << "found table in .tvdbb: " << table.table_name << endl;
             if (table.table_name == table_name)
             {
                 return true;
@@ -541,7 +544,6 @@ public:
         file_mm->WriteFileAppend(file_path, &endl, 1);
         file_mm->WriteFileAppend(file_path, db.db_all_tables_path.c_str(), db.db_all_tables_path.length());
         file_mm->WriteFileAppend(file_path, &endl, 1);
-        cout << " write end " << endl;
     }
     
     // load a db object from filef

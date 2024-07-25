@@ -191,7 +191,6 @@ public:
     {   
         file_stream.seekg(block_address * BLOCK_SIZE, std::ios::beg);
         file_stream.write(data, BLOCK_SIZE);
-        std::cout << "write back block success : " << data[0] << std::endl;
     }
 
     void ReadFromFile(fstream& file_stream, default_address_type block_address, char* data)

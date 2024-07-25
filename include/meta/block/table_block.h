@@ -52,7 +52,6 @@ public:
 
     TableBlock()
     {
-        // std::cout << "init one table block begin" << std::endl;
         table_amount = 0;
         CalAndUpdateFreeSpace();
         next_block_pointer = 0x0;
@@ -63,30 +62,22 @@ public:
         // open one memory block, and make data* controlled by mm
         MemoryManagement* mm = MemoryManagement::GetInstance();
         mm->GetFreeTableBlock(data);
-
-        // std::cout << "init one table block end" << std::endl;
     }
 
     ~TableBlock()
     {
-        // std::cout << "delete table block!" << std::endl;
-        
         MemoryManagement* mm = MemoryManagement::GetInstance();
         mm->ReleaseBlock(data);
 
         delete[] tables_begin_address;
-
-        // std::cout << "delete table block end!" << std::endl;
     }
     
     void CalAndUpdateFreeSpace()
     {
-        free_space = BLOCK_SIZE;
-        free_space -= sizeof(default_amount_type) - sizeof(default_length_size) - sizeof(default_address_type);
+        free_space = BLOCK_SIZE - sizeof(default_amount_type) - sizeof(default_length_size) - sizeof(default_address_type);
 
         if (table_amount != 0) {
-            default_length_size used_space = BLOCK_SIZE;
-            used_space -= tables_begin_address[table_amount - 1];
+            default_length_size used_space = BLOCK_SIZE - tables_begin_address[table_amount - 1];
             free_space -= used_space;
         }
     }
@@ -97,26 +88,24 @@ public:
     {
         if (table_amount == 0)
         {
-            address = BLOCK_SIZE;
-            address -= table->Serialize().second;
+            address = BLOCK_SIZE - table->Serialize().second;
             return true;
         }
 
         address = tables_begin_address[table_amount - 1] - table->Serialize().second;
-
-        // if this block has no space to contain this table
         if (address >= sizeof(default_amount_type) + sizeof(default_length_size) + sizeof(default_address_type) + table_amount * sizeof(default_address_type))
         {
             return true;
         }
 
+        // if this block has no space to contain this table, return false.
         return false;
     }
 
     void InsertTable(ColumnTable* table)
     {   
-        std::cout << "begin insert table " << std::endl;
         default_address_type insert_address;
+        
         if (table_amount == 0)
         {   
             if (CalBeginAddress(table, insert_address))
@@ -124,17 +113,18 @@ public:
                 table_amount++;
                 tables_begin_address = new default_address_type[1];
                 tables_begin_address[0] = insert_address;
-                cout << "insert_address: " << insert_address << endl;
-                memcpy(data + insert_address, table->Serialize().first, table->Serialize().second);
-                cout << "insert_ data: " << data[insert_address] << data[insert_address + 1] << endl;
+                std::pair<char *, size_t> serialize_result = table->Serialize();
+                memcpy(data + insert_address, serialize_result.first, serialize_result.second);
+                free(serialize_result.first);
+                CalAndUpdateFreeSpace();
                 SerializeHeader();
+
+                return;
             }
             else
             {
                 throw std::runtime_error("Failed to insert table in block");
             }
-            std::cout << "insert table end" << std::endl;
-            return;
         }
 
         if (CalBeginAddress(table, insert_address))
@@ -155,8 +145,8 @@ public:
             // TODO: create new table block and insert
         }
 
+        CalAndUpdateFreeSpace();
         SerializeHeader();
-        // std::cout << "insert table end" << std::endl;
     }
 
     /**
@@ -211,6 +201,8 @@ public:
             memcpy(&tables_begin_address[i], buffer + offset, sizeof(default_address_type));
             offset += sizeof(default_address_type);
         }
+
+        CalAndUpdateFreeSpace();
     }
 };
 
