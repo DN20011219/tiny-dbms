@@ -102,10 +102,10 @@ public:
         return false;
     }
 
-    void InsertTable(ColumnTable* table)
+    bool InsertTable(ColumnTable* table)
     {   
         default_address_type insert_address;
-        
+
         if (table_amount == 0)
         {   
             if (CalBeginAddress(table, insert_address))
@@ -119,11 +119,12 @@ public:
                 CalAndUpdateFreeSpace();
                 SerializeHeader();
 
-                return;
+                return true;
             }
             else
             {
-                throw std::runtime_error("Failed to insert table in block");
+                return false;
+                // throw std::runtime_error("Failed to insert table in block");
             }
         }
 
@@ -138,15 +139,18 @@ public:
 
             // write in memory block
             memcpy(data + insert_address, table->Serialize().first, table->Serialize().second);
+            CalAndUpdateFreeSpace();
+            SerializeHeader();
+            return true;
         }
         else
         {
-            throw std::runtime_error("Failed to insert table in block");
+            return false;
+            // throw std::runtime_error("Failed to insert table in block");
             // TODO: create new table block and insert
         }
 
-        CalAndUpdateFreeSpace();
-        SerializeHeader();
+
     }
 
     /**
