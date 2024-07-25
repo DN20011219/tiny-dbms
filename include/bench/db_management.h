@@ -62,6 +62,10 @@ private:
      */
     string GetAndCreateDbFolder(string db_name)
     {
+        if (GetInstallPath() == "")
+        {
+            throw std::runtime_error("dbms has not been installed!");
+        }
         string db_folder = GetInstallPath() + "/" + db_name;
         file_mm->OpencvDirAndMkdir(db_folder);
         return db_folder;
@@ -75,7 +79,7 @@ private:
     string GetAndCreateDefaultDbFile(string db_name)
     {   
         // create db file, db file has the same name as db folder
-        string db_file_name = GetAndCreateDbFolder(db_name) + "/" + DEFAULT_DB_FILE_NAME + DB_FILE_SUFFIX;
+        string db_file_name = GetAndCreateDbFolder(db_name) + "/" + db_name + DB_FILE_SUFFIX;
         file_mm->ReadOrCreateFile(db_file_name).close();
         return db_file_name;
     }
@@ -101,7 +105,6 @@ private:
     string GetAndCreateDefaultTableFile(string tables_path)
     {
         string default_table_header_uri = tables_path + "/" + DEFAULT_TABLE_NAME + TABLE_FILE_SUFFIX;
-        // cout << "GetAndCreateDefaultTableFile" << default_table_header_uri << endl;
         file_mm->ReadOrCreateFile(default_table_header_uri).close();
         return default_table_header_uri;
     }

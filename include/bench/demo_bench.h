@@ -51,22 +51,6 @@ namespace tiny_v_dbms {
         file_write.close();
     }
 
-    // create default db folder and file
-    // void CreateBaseDB(const string& install_path) 
-    // {   
-    //     FileManagement file_mm;
-
-    //     // create folder
-    //     string folder_path = install_path + "/" + DEFAULT_DB_FOLDER_NAME;
-    //     file_mm.OpencvDirAndMkdir(folder_path);
-
-    //     // create db file
-    //     string file_path = folder_path + "/" + DEFAULT_DB_FILE_NAME;
-    //     string mock_write_data = "install_success";     // TODO:change it to a real db file
-    //     const char* data_pointer = mock_write_data.c_str();
-    //     file_mm.WriteFile(file_path, data_pointer, mock_write_data.length());
-    // }
-
     void InstallDBMS() 
     {
         // get install path from file
@@ -100,27 +84,39 @@ namespace tiny_v_dbms {
         }
     }
 
+    void CreateDB()
+    {
+        string db_name;
+        cout << "input the db name: ";
+        cin >> db_name;
+        DBManagement db_mm;
+        db_mm.CreateDB(db_name);
+    }
+
     void StartBench() 
     {
-        InstallDBMS();
-        // char ctr;
-        // while(true) {
-        //     cin >> ctr;
-        //     switch (ctr)
-        //     {
-        //     case 'Q': // quit
-        //         return;
-        //     case 'T': // test
-        //         cout << "test" << std::endl;
-        //         break;
-        //     case 'I': // install
-        //         InstallDBMS();
-        //         break;
-        //     default:
-        //         cout << "default" << std::endl;
-        //         break;
-        //     }
-        // }
+        
+        char ctr;
+        while(true) {
+            cin >> ctr;
+            switch (ctr)
+            {
+            case 'Q': // quit
+                return;
+            case 'T': // test
+                cout << "test" << std::endl;
+                break;
+            case 'I': // install
+                InstallDBMS();
+                break;
+            case 'C':
+                CreateDB();
+                break;
+            default:
+                cout << "default" << std::endl;
+                break;
+            }
+        }
     }
 
  
