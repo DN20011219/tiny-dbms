@@ -102,24 +102,25 @@ namespace tiny_v_dbms {
 
     void StartBench() 
     {
-        char ctr;
-        while(true) {
-            cin >> ctr;
-            switch (ctr)
-            {
-            case 'Q': // quit
-                return;
-            case 'T': // test
-                cout << "test" << std::endl;
-                break;
-            case 'I': // install
-                InstallDBMS();
-                break;
-            default:
-                cout << "default" << std::endl;
-                break;
-            }
-        }
+        InstallDBMS();
+        // char ctr;
+        // while(true) {
+        //     cin >> ctr;
+        //     switch (ctr)
+        //     {
+        //     case 'Q': // quit
+        //         return;
+        //     case 'T': // test
+        //         cout << "test" << std::endl;
+        //         break;
+        //     case 'I': // install
+        //         InstallDBMS();
+        //         break;
+        //     default:
+        //         cout << "default" << std::endl;
+        //         break;
+        //     }
+        // }
     }
 
  

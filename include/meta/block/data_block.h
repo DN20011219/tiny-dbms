@@ -76,8 +76,7 @@ public:
     // return false when there has no space to contain the data in this block
     bool CalBeginAddress(default_address_type& address)
     {   
-        address = BLOCK_SIZE;
-        address -= field_data_nums * field_length;
+        address = BLOCK_SIZE - field_data_nums * field_length;
 
         // if this block has no space to contain this table
         if (address < 2 * sizeof(default_length_size) + 2 * sizeof(default_address_type))
