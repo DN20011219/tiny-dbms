@@ -136,9 +136,8 @@ private:
         file_stream.close();
     }
 
-    void WriteBackTableBlock(string table_file_uri, default_address_type offset, DataBlock& block)
+    void WriteBackTableBlock(string table_file_uri, default_address_type offset, TableBlock& block)
     {
-        cout << "WriteBackTableBlock" << table_file_uri << endl;
         fstream file_stream;
         bfmm->OpenTableFile(table_file_uri, file_stream);   // open table header file, like "test.tvdbb"   
         bfmm->WriteBackBlock(file_stream, offset, block.data);
@@ -147,6 +146,7 @@ private:
 
     void WriteBackDataBlock(string data_file_uri, default_address_type offset, DataBlock& block)
     {
+        block.Serialize();
         fstream file_stream;
         bfmm->OpenDataFile(data_file_uri, file_stream);    // open data file, like "test.data"   
         bfmm->WriteBackBlock(file_stream, offset, block.data);
@@ -171,11 +171,28 @@ public:
         CreateDefaultTableForBaseDb();
     }
     
-    // for sql: CREATE DATABASE db_name;
+    /**
+     * @brief Create a new database, for sql: CREATE DATABASE db_name;
+     * @param db_name The name of the database to be created
+     */
     void CreateDB(string db_name)
     {
-        // create db folder
+        // 1、get or create db folder and file
+        string db_path_uri = GetAndCreateDbFolder(db_name);
+        string db_file_uri = GetAndCreateDefaultDbFile(db_name);
 
+        DB default_db;
+        default_db.db_name = db_name;
+        default_db.db_all_tables_path = GetAndCreateDefaultTableFile(GetDefaultTablePath(db_path_uri));
+        SerializeDBFile(default_db, db_file_uri);
+
+        // 2、insert one row in base_db.default_table, means add one db
+        char* insert_db_name = new char[VCHAR_LENGTH];
+        memcpy(insert_db_name, &db_name, VCHAR_LENGTH);
+        InsertIntoTable(DEFAULT_DB_FOLDER_NAME, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, insert_db_name);
+
+        // 3、Create default table
+        CreateDefaultTable(db_name);
     }
 
     // create base db of this system, it will store all db names. so you can search db using it.
@@ -195,10 +212,63 @@ public:
         SerializeDBFile(default_db, db_file_uri);
     }
 
-    // for sql : USE db_name CREATE TABLE table_name
-    void CreateTable(string db_name, string table_name)
+    // for sql : USE db_name CREATE TABLE table_name(column1, column2, ...)
+    void CreateTable(string db_name, ColumnTable table)
     {
-        // TODO: 
+        // 1、check db exist
+        if (!CheckDbExist(db_name))
+        {
+            throw std::runtime_error(db_name + " not exist");
+        }
+
+        // 2、get the default table of db
+        ColumnTable default_table;
+        GetDefaultTable(db_name, default_table);
+
+        // 3、insert one row in it
+        char* insert_db_name = new char[VCHAR_LENGTH];
+        memcpy(insert_db_name, &table.table_name, VCHAR_LENGTH);
+        InsertIntoTable(db_name, table.table_name, DEFAULT_TABLE_COLUMN_NAME_TWO, insert_db_name);
+    
+        // 4、create table header, 
+        string table_header_file = GetAndCreateDefaultTableFile(db_name);
+        TableBlock block;
+        // here need to found one empty block to write.
+        default_address_type block_address = 0;
+        ReadOneTableBlock(table_header_file, block_address, block);
+        block.DeserializeFromBuffer(block.data);
+        while (!block.InsertTable(&table))
+        {
+            if (block.next_block_pointer == 0 && block_address != 0)
+            {
+                // table is not too big, big than one block
+                throw std::runtime_error(table.table_name + " is too big to insert");
+            }
+            if (block.next_block_pointer == 0) 
+            {
+                block_address = bfmm->GetNewBlockAddress(table_header_file);
+                block.next_block_pointer = block_address;
+            }
+            ReadOneTableBlock(table_header_file, block.next_block_pointer, block);
+            block.DeserializeFromBuffer(block.data);
+        }
+        WriteBackTableBlock(table_header_file, block_address, block);
+
+        // 5、create table data file
+        string data_file = GetAndCreateDataFile(GetAndCreateDbFolder(db_name), table.table_name);
+
+        // 6、create data block for each column, and write address to table header
+        for (default_amount_type i = 0; i < table.column_size; i++)
+        {
+            default_address_type new_data_block_address = bfmm->GetNewBlockAddress(data_file);
+            DataBlock data_block;
+            ReadOneDataBlock(data_file, new_data_block_address, data_block);
+            data_block.field_length = table.columns.column_length_array[i];
+            data_block.field_data_nums = 0;
+            data_block.next_block_pointer = 0;
+            WriteBackDataBlock(table_header_file, block_address, data_block);
+            table.columns.column_storage_address_array[i] = new_data_block_address;
+        }
     }
     
     // this is the function is used when creating user table
@@ -207,7 +277,6 @@ public:
         // 1、create default table header file
         string tables_path = GetDefaultTablePath(GetAndCreateDbFolder(db_name));
         string default_table_file_uri = GetAndCreateDefaultTableFile(tables_path);
-        cout << "default_table_file_uri: " << default_table_file_uri << endl;
 
         // 2、write data into table header file (data address is 0, because the data of default table must in the first block of table data file)
         // construct a block to read from or write to disk, construct a column_table(only has one column), and insert to block
@@ -217,7 +286,6 @@ public:
         ct.table_name = DEFAULT_TABLE_NAME;
         ct.table_type = COMMON;
         ct.InsertColumn(DEFAULT_TABLE_COLUMN_NAME_TWO, VCHAR, VCHAR_LENGTH, NONE, 0);    // insert one column header, column name is db_names
-
         block.InsertTable(&ct);    // insert table header data to block
 
         // write back
@@ -225,6 +293,7 @@ public:
         bfmm->OpenTableFile(default_table_file_uri, file_stream);    // open table header file, like "test.tvdbb"
         default_address_type free_address = bfmm->GetNewBlockAddress(file_stream);    // get free block address in file
         bfmm->WriteBackBlock(file_stream, free_address, block.data);
+        file_stream.close();
 
         // 3、store one row, which is "default_table", means the first table is default_table
         string table_name = DEFAULT_TABLE_NAME;
@@ -233,7 +302,6 @@ public:
         
         // 3、INSERT INTO default_table(db_names) VALUES (data) FROM base_db
         InsertIntoTable(DEFAULT_DB_FOLDER_NAME, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, deafult_db_name);
-
 
         free(deafult_db_name);
     }
@@ -275,7 +343,6 @@ public:
         // assert(new_ct.columns.column_name_array[new_ct.column_size - 1] == DEFAULT_TABLE_COLUMN_NAME_ONE);
         // assert(new_ct.columns.column_storage_address_array[new_ct.column_size - 1] == 0);
 
-
         
         // 3、INSERT INTO default_table(db_names) VALUES (data) FROM base_db
         string db_name = DEFAULT_DB_FOLDER_NAME;
@@ -296,16 +363,19 @@ public:
 
     }
 
-    // for sql: USE db_name CREATE table_name(columns)
-    void CreateTable(string db_name, ColumnTable& table_name, Columns& columns)
+    // get the default table of input db
+    void GetDefaultTable(string db_name, ColumnTable& default_table)
     {
-
+        if (!CheckTableExist(db_name, DEFAULT_TABLE_NAME, default_table))
+        {
+            throw std::runtime_error("db_name 's default_table not exist");
+        }
     }
 
     // mainly used when insert data to default table of base db, because the default table of base db will store all db names but not 
     void InsertIntoTableWithoutCheck(string db_name, string table_name, string column_name, char* data)
     {
-
+        
     }
 
     // for sql: INSERT INTO table_name(column_name) VALUES (data) ;
@@ -349,7 +419,6 @@ public:
         data_block.field_length = column.column_length_array[0];
         data_block.next_block_pointer = 0x0;    // must insert at last block, so set it's next_block_pointer as 0
         data_block.InsertData(data);
-        data_block.Serialize();
 
         // write back
         WriteBackDataBlock(data_file_uri, read_offset, data_block);
@@ -377,7 +446,29 @@ public:
     }
 
     /**
-     * Checks if a table exists in a database.
+     * @brief Checks if a database exists
+     * @param db_name The name of the database to check
+     * @return True if the database exists, false otherwise
+    */
+    bool CheckDbExist(string db_name)
+    {
+        // get default table of base db
+        ColumnTable default_table;
+        GetDefaultTable(DEFAULT_DB_FOLDER_NAME, default_table);
+
+        // check whether input db_name in it
+        for (default_amount_type i = 0; i < default_table.column_size; i++)
+        {
+            if (default_table.columns.column_name_array[i] == db_name)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @brief Checks if a table exists in a database.
      *
      * @param db_name The name of the database.
      * @param table_name The name of the table to check.
@@ -440,7 +531,7 @@ public:
     }
 
     /**
-     * Checks if a column exists in a table.
+     * @brief Checks if a column exists in a table.
      *
      * @param ct The ColumnTable object that contains the table's metadata.
      * @param column_name The name of the column to check.
