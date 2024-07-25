@@ -1,0 +1,14 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "type": "shell",
+        "label": "make app",   // 任务名
+        "command": "make",       // 命令行调用
+        "options": {
+          "cwd": "${workspaceFolder}/build"  // 在 build/ 目录中执行
+        },
+        "dependsOn": "let's cmake"           // 依赖哪个任务的执行结果
+      }
+    ]
+  }
