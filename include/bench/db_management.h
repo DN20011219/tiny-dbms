@@ -23,7 +23,6 @@ install folder
 #include "../meta/table/column_table.h"
 #include "../meta/block/table_block.h"
 #include "../meta/block/data_block.h"
-#include "../storage/table_file_management.h"
 #include "../storage/block_file_management.h"
 
 namespace tiny_v_dbms {
