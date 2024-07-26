@@ -160,10 +160,10 @@ public:
 
     /*
         CREATE DATABASE base_db;
+        USE base_db
         CREATE TABLE default_table (
             db_names VCHAR(20)
-        )
-        FROM base_db;
+        );
     */
     void CreateSystemDB()
     {   
