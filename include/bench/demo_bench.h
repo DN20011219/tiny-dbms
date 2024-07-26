@@ -93,6 +93,18 @@ namespace tiny_v_dbms {
         db_mm.CreateDB(db_name);
     }
 
+    void CreateTable()
+    {
+        string sql = "USE db CREATE table(column1 VCHAR, column2 NUMBER)"; 
+    }
+
+    void InsertData()
+    {
+        string sql = "INSERT ";
+        // cout << "please input sql: ";
+        // cin >> sql;
+    }
+
     void StartBench() 
     {
         
@@ -109,8 +121,10 @@ namespace tiny_v_dbms {
             case 'I': // install
                 InstallDBMS();
                 break;
-            case 'C':
+            case 'C': // create
                 CreateDB();
+                break;
+            case 'A': // add
                 break;
             default:
                 cout << "default" << std::endl;
