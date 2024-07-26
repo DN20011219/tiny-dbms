@@ -37,7 +37,7 @@ namespace tiny_v_dbms {
 
 using std::string; 
 
-struct DataBlock 
+class DataBlock 
 {
 
 public:
