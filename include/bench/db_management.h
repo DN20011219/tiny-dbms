@@ -299,7 +299,7 @@ public:
         // 3、INSERT INTO default_table(db_names) VALUES (data) FROM base_db
         InsertIntoTable(DEFAULT_DB_FOLDER_NAME, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, deafult_db_name);
 
-        free(deafult_db_name);
+        delete[] deafult_db_name;
     }
     
     // create a special default table for base db, this table will store all db's name.
@@ -345,7 +345,7 @@ public:
         char* deafult_db_name = new char[ct.columns.column_length_array[ct.column_size - 1]];
         strcpy(deafult_db_name, db_name.c_str());
         InsertIntoTable(DEFAULT_DB_FOLDER_NAME, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, deafult_db_name);
-        free(deafult_db_name);
+        delete[] deafult_db_name;
 
         // // Test: USE  DEFAULT_TABLE_NAME  SELECT  DEFAULT_TABLE_COLUMN_NAME_ONE  FROM  DEFAULT_TABLE_NAME
         // DataBlock data_block;

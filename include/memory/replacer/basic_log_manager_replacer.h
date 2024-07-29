@@ -44,6 +44,11 @@ public:
         log_managers_store = log_managers;
     }
     
+    ~BasicLogManagerReplacer()
+    {
+
+    }
+
     LogManager* GetLogManager(string db_name, string table_name)
     {   
         string name = db_name + "&" + table_name;
@@ -66,6 +71,9 @@ public:
             {
                 LogManagerSlot* new_slot = new LogManagerSlot();
                 
+                // store new slot
+                log_managers_store.push_back(new_slot);
+
                 logm_map_store.insert(std::make_pair(name, new_slot));
                 using_logm.push_back(new_slot);
 
@@ -113,7 +121,7 @@ public:
             std::unique_lock<mutex> lock(slot->access_control);
 
             // free LogManager
-            free(slot->log_manager);
+            delete slot->log_manager;
 
             // set state
             slot->is_free = true;

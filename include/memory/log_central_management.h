@@ -27,34 +27,74 @@ namespace tiny_v_dbms {
 class LogCentralManagement
 {
 private:
-    vector<LogManagerSlot> log_managers;
+    
     default_amount_type logm_amount;
     default_amount_type used_amount;
 
-    map<string, LogManagerSlot> logm_map;  // table_name & LogManager
+    map<string, LogManagerSlot*> logm_map;  // table_name & LogManager
+    vector<LogManagerSlot*> log_managers;
 
-public:
+    BasicLogManagerReplacer* replacer;
+
+    LogCentralManagement* instance;
+    mutex singlion_mutex;
 
     LogCentralManagement()
     {
         logm_amount = LOG_MANAGER_INSRANCE_AMOUNT;
         used_amount = 0;
+
+        replacer = new BasicLogManagerReplacer(LOG_MANAGER_INSRANCE_AMOUNT, logm_map, log_managers);
     }
 
     ~LogCentralManagement()
     {
-        
+        for (default_amount_type i = 0; i < log_managers.size(); i++)
+        {
+            delete log_managers[i];
+        }
     }
 
-    bool GetLogManager()
+public:
+
+    LogCentralManagement* GetInstance()
     {
-        
+        if (instance == nullptr)
+        {
+            std::unique_lock<mutex> lock(singlion_mutex);
+            if (instance == nullptr)
+            {
+                instance = new (std::nothrow) LogCentralManagement();
+            }
+        }
+        return instance;
     }
 
-    bool ReleaseLogManager()
+    void deleteInstance()
     {
-
+        std::unique_lock<std::mutex> lock(singlion_mutex);
+        if (instance)
+        {
+            delete instance;
+            instance = nullptr;
+        }
     }
+
+    LogManager* GetLogManager(string db_name, string table_name) 
+    {
+        LogManager* log_m = replacer->GetLogManager(db_name, table_name);
+        if (log_m == nullptr)
+        {
+            throw std::runtime_error("Can not get free LogManager!");
+        }
+        return log_m;
+    }
+
+    bool ReleaseLogManager(string db_name, string table_name)
+    {
+        return replacer->FreeLogManager(db_name, table_name);
+    }
+
 };
 
 }
