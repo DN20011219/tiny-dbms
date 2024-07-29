@@ -115,7 +115,7 @@ public:
                 tables_begin_address[0] = insert_address;
                 std::pair<char *, size_t> serialize_result = table->Serialize();
                 memcpy(data + insert_address, serialize_result.first, serialize_result.second);
-                free(serialize_result.first);
+                delete[] serialize_result.first;
                 CalAndUpdateFreeSpace();
                 SerializeHeader();
 

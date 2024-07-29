@@ -36,7 +36,7 @@ public:
     {
         if (log_manager)
         {
-            free(log_manager);
+            delete log_manager;
         }
     }
 
