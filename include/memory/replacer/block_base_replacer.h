@@ -1,41 +1,41 @@
 // Copyright (c) 2024 by dingning
 //
-// file  : block_replace.h
+// file  : block_base_replacer.h
 // since : 2024-07-20
-// desc  : basic replacer, this is a easy replacer.
+// desc  : basic replacer, this is a easy block replacer.
 
-#ifndef VDBMS_MEMORY_BLOCK_REPLACER_H_
-#define VDBMS_MEMORY_BLOCK_REPLACER_H_
+#ifndef VDBMS_MEMORY_BLOCK_REPALCER_BASIC_REPLACER_H_
+#define VDBMS_MEMORY_BLOCK_REPALCER_BASIC_REPLACER_H_
 
 #include <map>
 #include <list>
 #include <iostream>
 
-#include "memory_management.h"
-#include "memory_block.h"
+#include "../memory_management.h"
+#include "../memory_block_slot.h"
 
 namespace tiny_v_dbms {
 
 using std::list;
 
-class BlockReplacer
+class BlockBasicReplacer
 {
 private:
-    MemoryBlock* blocks;
+    MemoryBlockSlot* blocks;
     default_amount_type max_block_amount;
 
-    list<MemoryBlock*> free_blocks;
-    list<MemoryBlock*> using_blocks;
+    list<MemoryBlockSlot*> free_blocks;
+    list<MemoryBlockSlot*> using_blocks;
 
-    std::map<char*, MemoryBlock*> data_block_map;
+    std::map<char*, MemoryBlockSlot*> data_block_map;
 
 public:
-    ~BlockReplacer()
+    ~BlockBasicReplacer()
     {
         std::cout << "BlockReplacer has been destoried" << std::endl;
     }
 
-    BlockReplacer(MemoryBlock* blocks, default_amount_type max_block_amount, list<MemoryBlock*>& free_blocks_list, list<MemoryBlock*>& using_blocks_list):
+    BlockBasicReplacer(MemoryBlockSlot* blocks, default_amount_type max_block_amount, list<MemoryBlockSlot*>& free_blocks_list, list<MemoryBlockSlot*>& using_blocks_list):
         blocks(blocks), max_block_amount(max_block_amount)
     {   
         free_blocks = free_blocks_list;
@@ -44,7 +44,7 @@ public:
         for(int i = 0; i < max_block_amount; i++)
         {
             char* data= blocks[max_block_amount].data;
-            std::pair<char*, MemoryBlock*> pair(data, &blocks[max_block_amount]);
+            std::pair<char*, MemoryBlockSlot*> pair(data, &blocks[max_block_amount]);
             data_block_map.insert(pair);
         }
         // std::cout << "init free_blocks size: " << free_blocks.size() << std::endl;
@@ -59,7 +59,7 @@ public:
             std::cout << "no block to use" << std::endl;
             return false;
         }
-        MemoryBlock* block = free_blocks.front();
+        MemoryBlockSlot* block = free_blocks.front();
         free_blocks.pop_front();
         using_blocks.push_back(block);
 
@@ -84,8 +84,8 @@ public:
             data_block_map[data]->access_control.unlock();
 
             // find in used list
-            std::list<MemoryBlock*>::iterator erase_block;
-            for (std::list<MemoryBlock*>::iterator it = using_blocks.begin(); it != using_blocks.end(); ++it) {
+            std::list<MemoryBlockSlot*>::iterator erase_block;
+            for (std::list<MemoryBlockSlot*>::iterator it = using_blocks.begin(); it != using_blocks.end(); ++it) {
                 if (data_block_map[data] == *it)
                 {
                     erase_block = it;
@@ -103,4 +103,4 @@ public:
 
 }
 
-#endif // VDBMS_MEMORY_BLOCK_REPLACER_H_
+#endif // VDBMS_MEMORY_BLOCK_REPALCER_BASIC_REPLACER_H_

@@ -2,7 +2,9 @@
 //
 // file  : memory_management.h
 // since : 2024-07-18
-// desc  : TODO.
+// desc  : this is so called buffer_pool, but i called it as memory management.
+// because this is the central that exchange data between disk and memory. It's not
+// only control the pages store table data, but also control the pages store table header.
 
 #ifndef VDBMS_MEMORY_MEMORY_MANAGEMENT_H_
 #define VDBMS_MEMORY_MEMORY_MANAGEMENT_H_
@@ -12,8 +14,8 @@
 #include <iostream>
 
 #include "../config.h"
-#include "block_replacer.h"
-#include "memory_block.h"
+#include "replacer/block_base_replacer.h"
+#include "memory_block_slot.h"
 
 using std::mutex;
 using std::list;
@@ -32,20 +34,20 @@ private:
 
     default_amount_type max_table_block_amount; // store table block
 
-    MemoryBlock* data_memory_blocks;            // all blocks in this mm
-    MemoryBlock* table_memory_blocks;           // all table blocks in this mm
+    MemoryBlockSlot* data_memory_blocks;            // all blocks in this mm
+    MemoryBlockSlot* table_memory_blocks;           // all table blocks in this mm
 
 
     // belows are replacer 
-    list<MemoryBlock*> free_data_blocks;
-    list<MemoryBlock*> using_data_blocks;
+    list<MemoryBlockSlot*> free_data_blocks;
+    list<MemoryBlockSlot*> using_data_blocks;
     
-    list<MemoryBlock*> free_table_blocks;
-    list<MemoryBlock*> using_table_blocks;
+    list<MemoryBlockSlot*> free_table_blocks;
+    list<MemoryBlockSlot*> using_table_blocks;
 
 
-    BlockReplacer* data_replacer;
-    BlockReplacer* table_replacer;
+    BlockBasicReplacer* data_replacer;
+    BlockBasicReplacer* table_replacer;
 
 private:
 

@@ -7,9 +7,12 @@
 # 3、系统设计
 ## 3.1、SQL解析
 如何高效地执行一条SQL？这是一个开放性问题，可以使用任何方法回答。但是当前的DBMS几乎全部无一例外地选择了将解析与执行独立的思路进行设计。SQL解析可以理解为一种编译手段，只不过编译的结果是一棵下层接口的执行树，而错误的SQL（语法错误，语意错误）都会无法被编译得到正确结果。
-一棵AST的例子如下：
+阿里巴巴的MiniOB教学文档中提到了一条SQL的具体执行过程：
+![SQL-执行](./picture/alibaba_sql_excution.png)
+其中第一步，一棵AST的例子如下：
 ![AST-摘自美团技术文档](./picture/ast_example.png)
-由于支持全部的SQL的工作量过于巨大，如果全部手写很难在短时间内完成
+可以理解AST是一棵不受下层实现影响的语法树，任何SQL经由语法分析得到的AST都是相同的（实际上可能由于树的约定表述逻辑不同，得到的AST的结构并不完全相同，但是其中蕴含的语意必定是相同的）。AST是下层语意解析的基础，语意解析将AST解析成数据库中具体的对象（见上图）。
+由于支持全部的SQL的工作量过于巨大，如果全部手写很难在短时间内完成：
 > Writing and maintaining our own SQL parser is a bad idea. SQL is complex, even for simple things like SELECT. And don't get me started on Common Table Expressions, sub-queries and other fun features
 
 因此我选取了一部分核心SQL，提供解析执行能力。此版本具体支持的SQL特性见下图：
@@ -18,7 +21,7 @@
 ![后续计划支持的SQL](./picture/support_sql_type_future.png)
 
 参考资料：
-> 1、什么是SQL解析：
+> 1、美团：什么是SQL解析：
 > https://tech.meituan.com/2018/05/20/sql-parser-used-in-mtdp.html
 > 2、SQL定义：
 > https://www.w3schools.com/sql/sql_where.asp
@@ -28,6 +31,8 @@
 > https://github.com/pganalyze/libpg_query
 > 5、bustub 卡耐基梅隆 CMU 15445 项目
 > https://github.com/cmu-db/bustub
+> 6、阿里巴巴miniOB手册
+> https://obcommunity-private-oss.oceanbase.com/prod/blog/2023-09/%E4%BB%8E0%E5%88%B01%20OceanBase%E5%8E%9F%E7%94%9F%E5%88%86%E5%B8%83%E5%BC%8F%E6%95%B0%E6%8D%AE%E5%BA%93%E5%86%85%E6%A0%B8%E5%AE%9E%E6%88%98%E5%9F%BA%E7%A1%80%E7%89%88.pdf
 
 ### 3.1.1 分词器
 分词器的作用是将一条SQL语句分解为一个个的单词（token）。本系统支持的SQL暂时较为简单，支持解析的字段很少，因此可以选择多种分词方法。针对本版本支持的SQL，下面是一个最简单的分词器的设计：

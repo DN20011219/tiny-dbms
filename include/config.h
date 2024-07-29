@@ -42,10 +42,15 @@ namespace tiny_v_dbms {
     #define DEFAULT_TABLE_DATA_FILE_NAME "default_table"        // the name of default db table data file
     #define TABLE_DATA_FILE_SUFFIX ".data"                      // the suffix of table data file
 
+    #define DEFAULT_TABLE_LOG_FOLDER "log"
+    #define DEFAULT_TABLE_LOG_FILE_NAME "default_table"
+    #define TABLE_LOG_FILE_SUFFIX ".log"  
 
     // config about storage
     #define MEMORY_SIZE 10737418239 / 4            // the size of the memory, any memory using need to acquire space here, 10737418239 byte (1g) / 4 = 256 mb
     #define BLOCK_SIZE 4096                    // the size of one block is 4096 byte (4kb)
+    #define LOG_MANAGER_INSRANCE_AMOUNT 4096    // the log manager amount, it should as same as block amout in memory_management
+
 
     // config about meta data toe
     #define BASE_VECTOR Vector<int, double>     // basic vector, LENGTH_TYPE is int, DATA_TYPE is double
