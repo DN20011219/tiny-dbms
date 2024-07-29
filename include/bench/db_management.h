@@ -3,13 +3,7 @@
 // file  : db_management.h
 // since : 2024-07-19
 // desc  : 
-/*
-install folder
---db_name
-----
 
-
-*/
 
 #ifndef VDBMS_BENCH_DB_MANAGEMENT_H_
 #define VDBMS_BENCH_DB_MANAGEMENT_H_

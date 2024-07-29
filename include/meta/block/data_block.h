@@ -99,6 +99,57 @@ public:
         }
     }
 
+    void DeleteData(default_address_type data_address)
+    {
+        // check data is in address array, if not throw error
+        if (!CheckDataExist(data_address))
+        {
+            throw std::runtime_error("data address is not in block, but try delete it");
+        }
+
+        default_address_type start_address = BLOCK_SIZE - field_data_nums * field_length;
+        if (start_address == data_address) 
+        {
+            // no need to move
+        }
+        else{
+            // move [start_address, data_address - 1] to [start_address + field_length, data_address - 1 + field_length]
+            // to earse data at data_address
+            MoveData(start_address, data_address - 1, field_length);
+        }
+        
+        field_data_nums--;
+        Serialize();
+    }
+
+    bool CheckDataExist(default_address_type data_address)
+    {
+        // check address is on data range and length
+        if (data_address < BLOCK_SIZE - field_length * field_data_nums)
+        {
+            return false;
+        }
+
+        if ((BLOCK_SIZE - data_address + 1) % field_length != 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    // move [segment_begin, segment_end] offset byte right
+    void MoveData(default_address_type segment_begin, default_address_type segment_end, default_address_type offset)
+    {   
+        default_address_type copy_address = segment_end + offset;
+        while (segment_end >= segment_begin)
+        {
+            memcpy(data + segment_end, data + copy_address, 1);
+            segment_end--;
+            copy_address--;
+        }
+    }
+
     // Serialization method
     void Serialize() const {
         size_t offset = 0;
