@@ -2,10 +2,10 @@
 //
 // file  : basic_log_manager_replacer.h
 // since : 2024-07-29
-// desc  : TODO.
+// desc  : this is the basic replacer of log management.
 
-#ifndef VDBMS_MEMORY_BLOCK_BASIC_LOG_MANAGER_REPLACER_H_
-#define VDBMS_MEMORY_BLOCK_BASIC_LOG_MANAGER_REPLACER_H_
+#ifndef VDBMS_MEMORY_BASIC_LOG_MANAGER_REPLACER_H_
+#define VDBMS_MEMORY_BASIC_LOG_MANAGER_REPLACER_H_
 
 #include <map>
 #include <string>
@@ -152,4 +152,4 @@ public:
 
 }
 
-#endif // VDBMS_MEMORY_BLOCK_BASIC_LOG_MANAGER_REPLACER_H_
+#endif // VDBMS_MEMORY_BASIC_LOG_MANAGER_REPLACER_H_
