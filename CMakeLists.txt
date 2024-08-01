@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
+
+# Enable C++11
+set(CMAKE_CXX_STANDARD 11)
+
 project(tiny-vdbms)
 # add_executable(app src/test/meta/vector_test.cpp)
 # add_executable(app src/test/distance/basic_distance.cpp)
