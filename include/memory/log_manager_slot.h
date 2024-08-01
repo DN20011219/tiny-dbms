@@ -7,25 +7,22 @@
 #ifndef VDBMS_MEMORY_LOG_MANAGEMER_SLOT_H_
 #define VDBMS_MEMORY_LOG_MANAGEMER_SLOT_H_
 
-#include "replacer/basic_log_manager_replacer.h"
 #include "../meta/log.h"
 
 using std::mutex;
 
 namespace tiny_v_dbms {
 
-class LogManagerSlot 
+struct LogManagerSlot 
 {
-    friend class BasicLogManagerReplacer;
 
-private:
-
+public:
     bool is_free;                       // if is free, then can use it.
     mutex access_control;               // lock one block, so other thread can not change or readit.
 
     LogManager* log_manager;
 
-public:
+
 
     LogManagerSlot()
     {

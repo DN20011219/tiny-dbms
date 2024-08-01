@@ -14,10 +14,14 @@
 #include "../meta/db/db.h"
 #include "../storage/file_management.h"
 #include "../memory/memory_management.h"
+// table header & table data
 #include "../meta/table/column_table.h"
 #include "../meta/block/table_block.h"
 #include "../meta/block/data_block.h"
 #include "../storage/block_file_management.h"
+// log
+#include "../memory/log_central_management.h"
+#include "../meta/log.h"
 
 namespace tiny_v_dbms {
 
@@ -26,6 +30,7 @@ class DBManagement {
 private:
     FileManagement* file_mm;
     BlockFileManagement* bfmm;
+
 
     // get install path from file
     string GetInstallPath() 
@@ -418,6 +423,16 @@ public:
 
         // write back
         WriteBackDataBlock(data_file_uri, read_offset, data_block);
+    }
+
+    void DeleteRecord()
+    {
+
+    }
+
+    void UpdateRecord()
+    {
+        
     }
 
     // for sql: SELECT column_name FROM table_name

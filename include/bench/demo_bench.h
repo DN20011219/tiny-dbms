@@ -17,6 +17,7 @@
 #include <dirent.h>
 
 #include "../storage/file_management.h"
+#include "../sql/parser/separater.h"
 #include "db_management.h"
 
 using std::string;
@@ -100,9 +101,21 @@ namespace tiny_v_dbms {
 
     void InsertData()
     {
-        string sql = "INSERT ";
-        // cout << "please input sql: ";
-        // cin >> sql;
+    }
+
+    void ExecuteSQL()
+    {
+        while(true) {
+            // input sql
+            string sql;
+            getline(cin, sql);
+                
+            // sql parser
+            std::vector<Token> tokens = tokenize(sql);
+            printTokens(tokens);
+
+            cin.clear();
+        }
     }
 
     void StartBench() 
@@ -124,7 +137,8 @@ namespace tiny_v_dbms {
             case 'C': // create
                 CreateDB();
                 break;
-            case 'A': // add
+            case 'S': // add
+                ExecuteSQL();
                 break;
             default:
                 cout << "default" << std::endl;
@@ -133,7 +147,9 @@ namespace tiny_v_dbms {
         }
     }
 
- 
+    
+
+
 }
 
 #endif // VDBMS_BENCH_DEMO_BENCH_H_

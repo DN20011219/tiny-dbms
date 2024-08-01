@@ -25,7 +25,7 @@ using std::mutex;
 
 namespace tiny_v_dbms {
 
-enum LogType { UPDATE, DELETE };
+enum LogType { UPDATE_LOG, DELETE_LOG };
 
 class LogUnitHeader
 {
@@ -48,7 +48,7 @@ public:
         memcpy(serialize_data + offset, &log_type, sizeof(LogType));
         offset += sizeof(LogType);
 
-        if (log_type == DELETE)
+        if (log_type == DELETE_LOG)
         {
             // no need to serialize the log_data_length, must be 0
         }
@@ -71,7 +71,7 @@ public:
         memcpy(&log_type, serialize_data + offset, sizeof(LogType));
         offset += sizeof(LogType);
 
-        if (log_type == DELETE)
+        if (log_type == DELETE_LOG)
         {
             log_data_length = 0;
         }
@@ -253,7 +253,7 @@ public:    // follows are functions about data
         delete[] log_header_buffer;
 
         // read log body
-        if (log_unit.header.log_type == DELETE)
+        if (log_unit.header.log_type == DELETE_LOG)
         {
             log_unit.log_body = nullptr;
         }
@@ -302,11 +302,11 @@ public:    // follows are functions about data
             
             switch (log_unit.header.log_type)
             {
-            case UPDATE:
+            case UPDATE_LOG:
                 // update the record data
                 memcpy(block.data + log_unit.header.record_address, log_unit.log_body, block.field_length);
                 break;
-            case DELETE:
+            case DELETE_LOG:
                 // delete the record, earse from the block and re-organize block data to avoid fragment
                 block.DeleteData(log_unit.header.record_address);
                 break;

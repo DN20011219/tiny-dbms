@@ -16,6 +16,7 @@
 
 #include "../meta/log.h"
 #include "log_manager_slot.h"
+#include "replacer/basic_log_manager_replacer.h"
 #include "../config.h"
 
 using std::map;
@@ -36,8 +37,8 @@ private:
 
     BasicLogManagerReplacer* replacer;
 
-    LogCentralManagement* instance;
-    mutex singlion_mutex;
+    static LogCentralManagement* instance;
+    static mutex singlion_mutex;
 
     LogCentralManagement()
     {
@@ -57,7 +58,7 @@ private:
 
 public:
 
-    LogCentralManagement* GetInstance()
+    static LogCentralManagement* GetInstance()
     {
         if (instance == nullptr)
         {
