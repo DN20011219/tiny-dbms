@@ -10,39 +10,15 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <cctype>
+
+#include "token.h"
+#include "ast/pattern/sql_pattern.h"
 
 namespace tiny_v_dbms {
 
-enum TokenType {
-   KEYWORD,
-   IDENTIFIER,
-   OPERATOR,
-   NUMBER,
-   STRING,
-   UNKNOWN,
-   ERROR
-};
+bool IsKeyword(const std::string& word) {
 
-struct Token {
-    TokenType type;
-    std::string value;
-    std::string error_message;
-
-    Token(TokenType type, std::string value, std::string error_message) : type(type), value(value), error_message(error_message){}
-};
-
-static const std::string keywords[] = {
-    "SELECT", "FROM", "WHERE", "INSERT", "INTO", "VALUES",
-    "UPDATE", "SET", "DELETE", "CREATE", "TABLE", "DROP",
-    "ALTER", "ADD", "COLUMN", "AND", "OR", "NOT", "IN",
-    "LIKE", "JOIN", "ON", "ORDER", "BY", "GROUP", "HAVING",
-    "INT", "FLOAT", "VCHAR", "VECTOR"
-};
-
-bool isKeyword(const std::string& word) {
-
-    for (const auto& keyword : keywords) {
+    for (const auto& keyword : KEY_WORDS) {
         if (word == keyword) {
             return true;
         }
@@ -50,7 +26,7 @@ bool isKeyword(const std::string& word) {
     return false;
 }
 
-std::vector<Token> tokenize(const std::string& sql) 
+std::vector<Token> Tokenize(const std::string& sql) 
 {
    std::vector<Token> tokens;
    size_t i = 0;
@@ -69,10 +45,10 @@ std::vector<Token> tokenize(const std::string& sql)
                 word += toupper(sql[i]);
                 ++i;
             }
-            if (isKeyword(word)) {
-                tokens.push_back(Token(KEYWORD, word, ""));
+            if (IsKeyword(word)) {
+                tokens.push_back(Token(KEYWORD_T, word));
             } else {
-                tokens.push_back(Token(IDENTIFIER, word, ""));
+                tokens.push_back(Token(IDENTIFIER_T, word));
             }
         } else if (isdigit(sql[i])) {
             std::string number;
@@ -80,7 +56,7 @@ std::vector<Token> tokenize(const std::string& sql)
                 number += sql[i];
                 ++i;
             }
-            tokens.push_back(Token(NUMBER, number, ""));
+            tokens.push_back(Token(NUMBER_T, number));
         } else if (sql[i] == '\'' || sql[i] == '\"') {
             char quoteType = sql[i];
             std::string str;
@@ -90,7 +66,7 @@ std::vector<Token> tokenize(const std::string& sql)
             }
             if (i < sql.length()) {
                 str += sql[i++];
-                tokens.push_back(Token(STRING, str, ""));
+                tokens.push_back(Token(STRING_T, str));
             } else {
                 tokens.clear();
                 return tokens;
@@ -98,10 +74,8 @@ std::vector<Token> tokenize(const std::string& sql)
         } else if (ispunct(sql[i])) {
             std::string op;
             op += sql[i++];
-            tokens.push_back(Token(OPERATOR, op, ""));
+            tokens.push_back(Token(OPERATOR_T, op));
         } else {
-            std::string invalid;
-            invalid += sql[i++];
             tokens.clear();
             return tokens;
         }
@@ -110,22 +84,19 @@ std::vector<Token> tokenize(const std::string& sql)
     return tokens;
 }
 
-void printTokens(const std::vector<Token>& tokens) {
-   for (const auto& token : tokens) {
+void PrintTokens(const std::vector<Token>& tokens) {
+   for (Token token : tokens) {
        std::string type;
        switch (token.type) {
-           case KEYWORD: type = "KEYWORD"; break;
-           case IDENTIFIER: type = "IDENTIFIER"; break;
-           case OPERATOR: type = "OPERATOR"; break;
-           case NUMBER: type = "NUMBER"; break;
-           case STRING: type = "STRING"; break;
-           case ERROR: type = "ERROR"; break;
+           case KEYWORD_T: type = "KEYWORD"; break;
+           case IDENTIFIER_T: type = "IDENTIFIER"; break;
+           case OPERATOR_T: type = "OPERATOR"; break;
+           case NUMBER_T: type = "NUMBER"; break;
+           case STRING_T: type = "STRING"; break;
+           case ERROR_T: type = "ERROR"; break;
            default: type = "UNKNOWN"; break;
        }
        std::cout << type << ": " << token.value;
-       if (!token.error_message.empty()) {
-           std::cout << " (" << token.error_message << ")";
-       }
        std::cout << std::endl;
    }
 }

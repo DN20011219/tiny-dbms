@@ -18,6 +18,7 @@
 
 #include "../storage/file_management.h"
 #include "../sql/parser/separater.h"
+#include "../sql/parser/parser.h"
 #include "db_management.h"
 
 using std::string;
@@ -104,15 +105,20 @@ namespace tiny_v_dbms {
     }
 
     void ExecuteSQL()
-    {
+    {   
+        Parser parser;
+
         while(true) {
             // input sql
             string sql;
             getline(cin, sql);
                 
-            // sql parser
-            std::vector<Token> tokens = tokenize(sql);
-            printTokens(tokens);
+            // seperate sql 
+            std::vector<Token> tokens = Tokenize(sql);
+            PrintTokens(tokens);
+
+            // parse sql 
+            bool parse_result = parser.ParseSql(tokens);
 
             cin.clear();
         }
