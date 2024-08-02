@@ -50,15 +50,46 @@ struct Index
     IndexType index_type;
 };
 
-struct Table
+// struct Table
+// {
+//     string table_name;
+// };
+
+// sql struct 
+struct CreateDatabaseSql
 {
-    vector<Column> columns;
-    vector<Index> indexs; 
+    string db_name;
 };
-
-// struct 
-
-
+struct CreateTableSql
+{
+    string table_name;
+    vector<Column> columns;
+};
+struct InsertTableSql
+{
+    string table_name;
+    vector<Column> columns;
+    vector<Value> values;
+};
+struct SelectFromOneTableSql
+{
+    string table_name;
+    vector<Column> columns;
+};
+// TODO:Select using join
+// struct SelectFromTableWithJoinSql
+// {
+//     string table_name;
+//     vector<Column> columns;
+// };
+struct DropDatabaseSql
+{
+    string db_name;
+};
+struct DropTableSql
+{
+    string table_name;
+};
 class BaseNode
 {
 private:
