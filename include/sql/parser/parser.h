@@ -9,7 +9,7 @@
 #ifndef VDBMS_SQL_PARSER_PARSER_H_
 #define VDBMS_SQL_PARSER_PARSER_H_
 
-#include "ast/pattern/sql_pattern.h"
+#include "sql_pattern.h"
 
 namespace tiny_v_dbms {
 

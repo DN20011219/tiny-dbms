@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "token.h"
-#include "ast/pattern/sql_pattern.h"
+#include "sql_pattern.h"
 
 namespace tiny_v_dbms {
 
