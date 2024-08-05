@@ -22,49 +22,106 @@ namespace tiny_v_dbms {
 enum ValueType {
     INT_T, 
     FLOAT_T,
-    VCHAR_T
+    VCHAR_T,
+
+    RAW_VALUE,  // used when value is read from sql and not get it's type from stored table file
 };
+
+ValueType GetValueTypeFromStr(string value_str)
+{
+    if (value_str == "INT")
+    {
+        return INT_T;
+    }
+    if (value_str == "FLOAT")
+    {
+        return FLOAT_T;
+    }
+        if (value_str == "VCHAR")
+    {
+        return VCHAR_T;
+    }
+
+    throw std::runtime_error("can not parse value type: " + value_str);
+}
 
 class Value
 {
 
 public:
 
-    // this constructor is used when read or write from memory buffer (know it's type)
+    string raw_value;
+
+    ~Value()
+    {
+        if (string_value != nullptr)
+        {
+            delete[] string_value;
+        }
+    }
+
+    // onlu init value_type
     Value(ValueType value_type) : value_type(value_type) {}
 
-    // belows constructor are used when sql parsing
+    // this constructor is used when not know it's type but has value.
+    // So this time can use raw_value to store data for future value check and convert.
+    Value (string value){
+        value_type = ValueType::RAW_VALUE;
+        raw_value = value;
+
+        string_value = nullptr;
+    }
+
     Value(int int_value)
     {
         value_type = ValueType::INT_T;
         num_value.int_value = int_value;
+
+        string_value = nullptr;
     }
 
     Value(float float_value)
     {
         value_type = ValueType::FLOAT_T;
         num_value.float_value = float_value;
+
+        string_value = nullptr;
     }
 
-    /**
-     * Constructs a Value object from a given string.
-     *
-     * The numeric value of the Value object will be set to the length of the input string.
-     * The string value will be moved from the input string to avoid unnecessary copies.
-     *
-     * @param string_value The input string to construct the Value object from.
-     *
-     * Example:
-     * ```cpp
-     * Value val("Hello, World!");
-     * std::cout << val.num_value.int_value << std::endl;  // Outputs: 13
-     * ```
-     */
-    Value(string string_value)
+    Value(char* value, int value_length)
     {
         value_type = ValueType::VCHAR_T;
-        num_value.int_value = string_value.size();
-        string_value = std::move(string_value.c_str());
+        num_value.int_value = value_length;
+        string_value = new char[value_length];
+        memcpy(string_value, value, value_length);
+    }
+
+    // this function is used after set raw value, and know the type of value
+    void InitValue(ValueType type)
+    {
+        switch (type)
+        {
+        case INT_T:
+            try {
+                num_value.int_value = std::stoi(raw_value);
+            } catch (std::exception& e) {
+                throw std::runtime_error("can not parse string to int");
+            }
+            break;
+        case FLOAT_T:
+            try {
+                num_value.int_value = std::stof(raw_value);
+            } catch (std::exception& e) {
+                throw std::runtime_error("can not parse string to float");
+            }
+            break;
+        case VCHAR_T:
+            string_value = new char[raw_value.size()];
+            memcpy(string_value, raw_value.c_str(), raw_value.size());
+            break;
+        default:
+            throw std::runtime_error("Value: " + raw_value + " 's type is raw, need to be initialized!");
+        }
     }
 
     int GetIntValue()
@@ -164,6 +221,11 @@ public:
             string_value = new char(num_value.int_value);
             memcpy(string_value, data + offset, num_value.int_value);
         }
+    }
+
+    string ToString() const
+    {
+        return raw_value;
     }
 
 private:

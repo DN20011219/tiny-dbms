@@ -52,7 +52,7 @@ std::vector<Token> Tokenize(const std::string& sql)
             }
         } else if (isdigit(sql[i])) {
             std::string number;
-            while (i < sql.length() && isdigit(sql[i])) {
+            while (i < sql.length() && (isdigit(sql[i]) || sql[i] == '.')) {
                 number += sql[i];
                 ++i;
             }
@@ -91,13 +91,12 @@ void PrintTokens(const std::vector<Token>& tokens) {
            case KEYWORD_T: type = "KEYWORD"; break;
            case IDENTIFIER_T: type = "IDENTIFIER"; break;
            case OPERATOR_T: type = "OPERATOR"; break;
-           case NUMBER_T: type = "NUMBER"; break;
-           case STRING_T: type = "STRING"; break;
+           case NUMBER_T: type = "NUMBER_T"; break;
+           case STRING_T: type = "STRING_T"; break;
            case ERROR_T: type = "ERROR"; break;
            default: type = "UNKNOWN"; break;
        }
-       std::cout << type << ": " << token.value;
-       std::cout << std::endl;
+       std::cout << type << ": " << token.value << "  ";
    }
 }
 

@@ -38,6 +38,8 @@ static const std::string KEY_WORDS[] = {
     "DATABASE"
 };
 
+
+
 }
 
 #endif // VDBMS_SQL_PARSER_TOKEN_H_
