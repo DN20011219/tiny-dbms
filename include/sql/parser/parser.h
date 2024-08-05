@@ -18,20 +18,19 @@ class Parser
 
 public:
 
-    bool ParseSql(std::vector<Token> sql_tokens)
+    NodeType ParseSql(std::vector<Token> sql_tokens)
     {
-        for(SqlPattern pattern : ALL_PATTERNS)
+        int pattern_flag = 0;
+        while (pattern_flag < ALL_PATTERNS.size())
         {
-            if (pattern.Match(sql_tokens))
+            if (ALL_PATTERNS[pattern_flag].Match(sql_tokens))
             {
-                return true;
+                return ALL_PATTERNS_NODE_TYPE[pattern_flag];
             }
+            pattern_flag++;
         }
-        return false;
+        throw std::runtime_error("Can not parse sql!");
     }
-    
-
-private:
 
 };
 

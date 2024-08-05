@@ -12,6 +12,7 @@
 #include <utility>
 #include <initializer_list>
 
+#include "../nodes/ast.h"
 #include "../../token.h"
 #include <vector>
 
@@ -200,7 +201,7 @@ public:
         int next_pattern_offset = 0;
         while (next_pattern_offset < next_patterns.size())
         {
-            this_pattern_length += next_patterns[next_pattern_offset].tokens_num;
+            this_pattern_length += next_patterns[next_pattern_offset].GetMatchLength();
             next_pattern_offset++;
         }
 
@@ -208,22 +209,30 @@ public:
     }
 };
 
-// all match pattern has been list here:
+// all pattern can be matched has been list here:
 
+TokenPattern ID(1, {Token(IDENTIFIER_T, "")});
 TokenPattern NEXT_ID(2, {Token(OPERATOR_T, ","), Token(IDENTIFIER_T, "")}); // , ID
+
+TokenPattern VALUE(1, {Token(STRING_T, "")});
 TokenPattern NEXT_VALUE(2, {Token(OPERATOR_T, ","), Token(STRING_T, "")});  // , VALUE(string, int, string)
 
-TokenPattern DATABASE(1, {Token(KEYWORD_T, "DATABASE")});
 
+TokenPattern INSERT(1, {Token(KEYWORD_T, "INSERT")});
+TokenPattern INTO(1, {Token(KEYWORD_T, "INTO")});
 TokenPattern CREATE(1, {Token(KEYWORD_T, "CREATE")});
+TokenPattern DATABASE(1, {Token(KEYWORD_T, "DATABASE")});
 TokenPattern TABLE(1, {Token(KEYWORD_T, "TABLE")});
-TokenPattern ID(1, {Token(IDENTIFIER_T, "")});
+TokenPattern VALUES(1, {Token(KEYWORD_T, "VALUES")});
+
 TokenPattern LEFT_BRACKET(1, {Token(OPERATOR_T, "(")});
 TokenPattern VALUE_TYPE(4, {Token(KEYWORD_T, "INT"), Token(KEYWORD_T, "FLOAT"), Token(KEYWORD_T, "VCHAR"), Token(KEYWORD_T, "VECTOR")}, true);
 vector<TokenPattern> NEXT_COLUMN_VALUE_TYPE({VALUE_TYPE});
 TokenPattern NEXT_COLUMN(2, {Token(OPERATOR_T, ","), Token(IDENTIFIER_T, "")}, false, NEXT_COLUMN_VALUE_TYPE); // , ID DATA_TYPE
 TokenPattern RIGHT_BRACKET(1, {Token(OPERATOR_T, ")")});
 TokenPattern SEMICOLON(1, {Token(OPERATOR_T, ";")});
+
+// belows are sql patterns:
 
 // CREATE DATABASE ID ;
 vector<TokenPattern> CREATE_DATABASE_SQL_PATTERN({CREATE, DATABASE, ID, SEMICOLON});
@@ -233,17 +242,21 @@ vector<bool> CREATE_DATABASE_SQL_PATTERN_NEC({true, true, true, true});
 vector<TokenPattern> CREATE_TABLE_SQL_PATTERN({CREATE, TABLE, ID, LEFT_BRACKET, ID, VALUE_TYPE, NEXT_COLUMN, RIGHT_BRACKET, SEMICOLON});
 vector<bool> CREATE_TABLE_SQL_PATTERN_NEC({true, true, true, true, true, true, false, true, true});
 
-class SqlPattern
+// INSERT INTO ID (ID NEXT_ID) VALUES (VALUE, NEXT_VALUE) ;
+vector<TokenPattern> INSERT_INTO_SQL_PATTERN({INSERT, INTO, ID, LEFT_BRACKET, ID, NEXT_ID, RIGHT_BRACKET, VALUES, LEFT_BRACKET, VALUE, NEXT_VALUE, RIGHT_BRACKET, SEMICOLON});
+vector<bool> INSERT_INTO_SQL_PATTERN_NEC({true, true, true, true, true, false, true, true, true, true, false, true, true});
+
+class SqlPatternMatcher
 {
     vector<TokenPattern> paterns;   // all tokens construct a pattern
     vector<bool> necessary;  // whether a patern is must needed in this sql, such as NEXT_COLUMN, NEXT_VALUE, NEXT_ID
 
 public:
 
-    SqlPattern();
-    ~SqlPattern(){}
+    SqlPatternMatcher();
+    ~SqlPatternMatcher(){}
 
-    SqlPattern(vector<TokenPattern>& token_patterns, vector<bool>& necessary_vector)
+    SqlPatternMatcher(vector<TokenPattern>& token_patterns, vector<bool>& necessary_vector)
     {
         if (token_patterns.size() != necessary_vector.size())
         {
@@ -253,8 +266,10 @@ public:
         necessary = necessary_vector;
     }
 
+    // match sql mode and create ast
     bool Match(vector<Token> tokens)
     {
+        
         int check_pattern = 0;  // match pattern offset
         int check_offset = 0;   // token list begin match offset
         while (check_pattern < necessary.size())
@@ -270,11 +285,11 @@ public:
             // if not, can match 0 - N times
             else
             {
-                int match_times = 0;
+                // int match_times = 0;
                 while(paterns[check_pattern].Match(tokens, check_offset))
                 {
-                    match_times++;
-                    check_offset += match_times * paterns[check_pattern].GetMatchLength();
+                    // match_times++;
+                    check_offset += paterns[check_pattern].GetMatchLength();
                 } 
             }
 
@@ -287,14 +302,61 @@ public:
 
 };
 
-SqlPattern CREATE_DATABASE(CREATE_DATABASE_SQL_PATTERN, CREATE_DATABASE_SQL_PATTERN_NEC);
-SqlPattern CREATE_TABLE(CREATE_TABLE_SQL_PATTERN, CREATE_TABLE_SQL_PATTERN_NEC);
 
+// belows are sql matcher tools:
+SqlPatternMatcher CREATE_DATABASE(CREATE_DATABASE_SQL_PATTERN, CREATE_DATABASE_SQL_PATTERN_NEC);
+SqlPatternMatcher CREATE_TABLE(CREATE_TABLE_SQL_PATTERN, CREATE_TABLE_SQL_PATTERN_NEC);
+SqlPatternMatcher INSERT_INTO_TABLE(INSERT_INTO_SQL_PATTERN, INSERT_INTO_SQL_PATTERN_NEC);
 
-// store all pattern for using
-vector<SqlPattern> ALL_PATTERNS({CREATE_DATABASE, CREATE_TABLE});
+// store all match tool for using
+vector<SqlPatternMatcher> ALL_PATTERNS(
+    {
+        CREATE_DATABASE, 
+        CREATE_TABLE, 
+        INSERT_INTO_TABLE
+    }
+);
+vector<NodeType> ALL_PATTERNS_NODE_TYPE(
+    {
+        CREATE_DATABASE_NODE, 
+        CREATE_TABLE_NODE, 
+        INSERT_INTO_TABLE_NODE
+    }
+);
 
+class NodeBuilder
+{
 
+public:
+    AST* BuildNode(vector<Token> tokens, NodeType node_type)
+    {
+        AST* ast = nullptr;
+        void* sql = nullptr;
+        switch (node_type)
+        {
+        case CREATE_DATABASE_NODE:
+            sql = new CreateDatabaseSql(tokens);
+            ast = new AST(CREATE_DATABASE_NODE, sql);
+            break;
+
+        case CREATE_TABLE_NODE:
+            sql = new CreateTableSql(tokens);
+            ast = new AST(CREATE_TABLE_NODE, sql);
+            break;
+
+        case INSERT_INTO_TABLE_NODE:
+            sql = new InsertIntoTableSql(tokens);
+            ast = new AST(INSERT_INTO_TABLE_NODE, sql);
+            break;
+
+        // TODO: more sql support is on designing
+        default:
+            throw std::runtime_error("Can not parse sql to node!");
+            break;
+        }
+        return ast;
+    }
+};
 
 }
 
