@@ -12,8 +12,8 @@
 #include <utility>
 #include <initializer_list>
 
-#include "../nodes/ast.h"
-#include "../../token.h"
+#include "ast.h"
+#include "token.h"
 #include <vector>
 
 using std::vector;
@@ -69,13 +69,13 @@ public:
                         || 
                         input_tokens[begin_check_offset + template_check_offset].value != tokens_template[template_check_offset].value
                     ) 
-                        return false;
+                    return false;
                 } break;
                 case IDENTIFIER_T: {    // to ID, not need to further check
                     if (
                         input_tokens[begin_check_offset + template_check_offset].type != IDENTIFIER_T 
                     ) 
-                        return false;
+                    return false;
                 } break;
                 case OPERATOR_T: {    // to OPERATOR, must check the value, such as , ( )
                     if (
@@ -83,7 +83,7 @@ public:
                         || 
                         input_tokens[begin_check_offset + template_check_offset].value != tokens_template[template_check_offset].value
                     ) 
-                        return false;
+                    return false;
                 } break;
                 case NUMBER_T: {    // to VALUE token(NUMBER_T, STRING_T), maybe need more check, but now we only check if it's a VALUE
                     if (
@@ -91,7 +91,7 @@ public:
                         && 
                         input_tokens[begin_check_offset + template_check_offset].type != STRING_T
                     )
-                        return false;
+                    return false;
                 } break;
                 case STRING_T: {    // as same as the NUMBER_T
                     if (
@@ -99,7 +99,7 @@ public:
                         && 
                         input_tokens[begin_check_offset + template_check_offset].type != STRING_T
                     )
-                        return false;
+                    return false;
                 } break;
                 default:
                     return false;

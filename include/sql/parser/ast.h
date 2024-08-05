@@ -4,17 +4,17 @@
 // since : 2024-07-26
 // desc  : this is a Abstract Syntax Tree(AST) node, means here are sqls to execute.
 
-#ifndef VDBMS_SQL_ABSTRACT_SYNTAX_TREE_NODES_NODE_H_
-#define VDBMS_SQL_ABSTRACT_SYNTAX_TREE_NODES_NODE_H_
+#ifndef VDBMS_SQL_PASRSER_AST_H_
+#define VDBMS_SQL_PASRSER_AST_H_
 
 #include <vector>
 #include <string>
 #include <iostream>
 #include <sstream>
 
-#include "../../../../meta/value.h"
-#include "../../../../config.h"
-#include "../../token.h"
+#include "../../meta/value.h"
+#include "../../config.h"
+#include "token.h"
 
 using std::vector;
 using std::string;
@@ -368,4 +368,4 @@ public:
 
 }
 
-#endif // VDBMS_SQL_ABSTRACT_SYNTAX_TREE_NODES_NODE_H_
+#endif // VDBMS_SQL_PASRSER_AST_H_
