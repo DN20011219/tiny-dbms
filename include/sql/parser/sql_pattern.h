@@ -31,9 +31,12 @@ class TokenPattern
     // will be used to check one input token, if anyone matched, return true
     bool range_check;
     
-    // if next_patterns not empty, means here is more pattern must be matched behind this pattern. 
+    // if next_patterns not empty, means here is more pattern must be matched behind this pattern. If range_check is true, anyone of next_patterns match will return true
     vector<TokenPattern> next_patterns;
     
+    // this is a cache of match_length;
+    int match_length;
+
 public: 
 
     TokenPattern() {};
@@ -46,8 +49,8 @@ public:
         next_patterns = obj.next_patterns;
     }
 
-    TokenPattern(int tokens_num, std::initializer_list<Token> tokens, bool range_check = false, vector<TokenPattern> next_patterns = vector<TokenPattern>(0))
-        : tokens_num(tokens_num), tokens_template(std::move(tokens)) 
+    TokenPattern(int tokens_vector_size, std::initializer_list<Token> tokens, bool range_check = false, vector<TokenPattern> next_patterns = vector<TokenPattern>(0))
+        : tokens_num(tokens_vector_size), tokens_template(std::move(tokens)) 
     {
         this->range_check = range_check;
         this->next_patterns = next_patterns;
@@ -114,6 +117,7 @@ public:
     bool RangeCheck(vector<Token> input_tokens, int begin_check_offset)
     {
         int template_check_offset = 0;
+        // try match tokens_template
         while (template_check_offset < tokens_num)
         {
             if (begin_check_offset + template_check_offset >= input_tokens.size())
@@ -126,86 +130,126 @@ public:
                         input_tokens[begin_check_offset + template_check_offset].type == KEYWORD_T 
                         || 
                         input_tokens[begin_check_offset + template_check_offset].value == tokens_template[template_check_offset].value
-                    ) 
+                        ) 
+                    {
+                        match_length = 1;
                         return true;
+                    }
                 } break;
                 case IDENTIFIER_T: {    // to ID, not need to further check
                     if (
                         input_tokens[begin_check_offset + template_check_offset].type == IDENTIFIER_T 
-                    ) 
+                        ) 
+                    {
+                        match_length = 1;
                         return true;
+                    }
                 } break;
                 case OPERATOR_T: {    // to OPERATOR, must check the value, such as , ( )
                     if (
                         input_tokens[begin_check_offset + template_check_offset].type == OPERATOR_T 
                         && 
                         input_tokens[begin_check_offset + template_check_offset].value == tokens_template[template_check_offset].value
-                    ) 
+                        ) 
+                    {
+                        match_length = 1;
                         return true;
+                    }
                 } break;
                 case NUMBER_T: {    // to VALUE token(NUMBER_T, STRING_T), maybe need more check, but now we only check if it's a VALUE
                     if (
                         input_tokens[begin_check_offset + template_check_offset].type == NUMBER_T 
-                        && 
+                        || 
                         input_tokens[begin_check_offset + template_check_offset].type == STRING_T
-                    )
+                        )
+                    {
+                        match_length = 1;
                         return true;
+                    }
                 } break;
                 case STRING_T: {    // as same as the NUMBER_T
                     if (
                         input_tokens[begin_check_offset + template_check_offset].type == NUMBER_T 
-                        && 
+                        ||
                         input_tokens[begin_check_offset + template_check_offset].type == STRING_T
-                    )
+                        )
+                    {
+                        match_length = 1;
                         return true;
+                    }
                 } break;
                 default:
                     return false;
             }
             template_check_offset++;
         }
+
+        // if type is range check and next_patterns not empty, 
+        // then try to match any one of next_patterns, if matched anyone of next, return true.
+        int next_template_check_offset = 0;
+        while (next_template_check_offset < next_patterns.size())
+        {
+            if (next_patterns[next_template_check_offset].Match(input_tokens, begin_check_offset))
+            {
+                match_length = next_patterns[next_template_check_offset].GetMatchLength();
+                return true;
+            }
+            next_template_check_offset++;
+        }
+        
         return false;
     }
 
     // first match this pattern, if there has more patern, recursively check.
     bool Match(vector<Token> input_tokens, int begin_check_offset)
     {
-        // match the pattern behind.
+        // range_check: one of this tokens_template and next_patterns matched will return true
+        if (range_check)
+        {
+            return RangeCheck(input_tokens, begin_check_offset);
+        }    
+
+
+        // first match self
+        if (!CertainCheck(input_tokens, begin_check_offset))
+        {
+            return false;
+        }
+        // match tokens_template
         int next_pattern_offset = 0;
         int total_offset = tokens_num;
         while (next_pattern_offset < next_patterns.size())
         {
             if (!next_patterns[next_pattern_offset].Match(input_tokens, begin_check_offset + total_offset))
+            {
                 return false;
-            total_offset += next_patterns[next_pattern_offset].tokens_num;
+            }    
+            total_offset += next_patterns[next_pattern_offset].GetMatchLength();
             next_pattern_offset++;
         }
 
-        // match this pattern
-        if (range_check)
-        {
-            return RangeCheck(input_tokens, begin_check_offset);
-        }
-        return CertainCheck(input_tokens, begin_check_offset);
+        return true;
     }
 
     int GetMatchLength()
     {
-        int this_pattern_length;
         if (range_check)
-            this_pattern_length =  1;
-        else 
-            this_pattern_length = tokens_num;
-        
-        // cal the length of behind patterns.
-        int next_pattern_offset = 0;
-        while (next_pattern_offset < next_patterns.size())
         {
-            this_pattern_length += next_patterns[next_pattern_offset].GetMatchLength();
-            next_pattern_offset++;
+            return match_length;
+        } 
+        else 
+        {
+            int length = tokens_num;
+            // cal the length of behind patterns.
+            int next_pattern_offset = 0;
+            while (next_pattern_offset < next_patterns.size())
+            {
+                length += next_patterns[next_pattern_offset].GetMatchLength();
+                next_pattern_offset++;
+            }
+            return length;
         }
 
-        return this_pattern_length;
     }
 };
 
@@ -218,19 +262,36 @@ TokenPattern VALUE(1, {Token(STRING_T, "")});
 TokenPattern NEXT_VALUE(2, {Token(OPERATOR_T, ","), Token(STRING_T, "")});  // , VALUE(string, int, string)
 
 
+// BASE SQL
 TokenPattern INSERT(1, {Token(KEYWORD_T, "INSERT")});
 TokenPattern INTO(1, {Token(KEYWORD_T, "INTO")});
 TokenPattern CREATE(1, {Token(KEYWORD_T, "CREATE")});
 TokenPattern DATABASE(1, {Token(KEYWORD_T, "DATABASE")});
 TokenPattern TABLE(1, {Token(KEYWORD_T, "TABLE")});
 TokenPattern VALUES(1, {Token(KEYWORD_T, "VALUES")});
-
 TokenPattern LEFT_BRACKET(1, {Token(OPERATOR_T, "(")});
 TokenPattern VALUE_TYPE(4, {Token(KEYWORD_T, "INT"), Token(KEYWORD_T, "FLOAT"), Token(KEYWORD_T, "VCHAR"), Token(KEYWORD_T, "VECTOR")}, true);
-vector<TokenPattern> NEXT_COLUMN_VALUE_TYPE({VALUE_TYPE});
-TokenPattern NEXT_COLUMN(2, {Token(OPERATOR_T, ","), Token(IDENTIFIER_T, "")}, false, NEXT_COLUMN_VALUE_TYPE); // , ID DATA_TYPE
+vector<TokenPattern> NEXT_COLUMN_VALUE_V({VALUE_TYPE});
+TokenPattern NEXT_COLUMN(2, {Token(OPERATOR_T, ","), Token(IDENTIFIER_T, "")}, false, NEXT_COLUMN_VALUE_V); // , ID DATA_TYPE
 TokenPattern RIGHT_BRACKET(1, {Token(OPERATOR_T, ")")});
 TokenPattern SEMICOLON(1, {Token(OPERATOR_T, ";")});
+
+// SELECT SQL 
+TokenPattern SELECT(1, {Token(KEYWORD_T, "SELECT")});
+vector<TokenPattern> FIRST_COL_V({ID});
+TokenPattern FIRST_COL(1, {Token(OPERATOR_T, "*")}, true, FIRST_COL_V); // * / ID
+TokenPattern FROM(1, {Token(KEYWORD_T, "FROM")});
+TokenPattern WHERE(1, {Token(KEYWORD_T, "WHERE")});
+
+TokenPattern NOT_EQUAL_SIGN(2, {Token(OPERATOR_T, "!"), Token(OPERATOR_T, "=")});
+vector<TokenPattern> NOT_EQUAL_V({NOT_EQUAL_SIGN}); // !=
+TokenPattern COMPARER(3, {Token(OPERATOR_T, ">"), Token(OPERATOR_T, "<"), Token(OPERATOR_T, "=")}, true, NOT_EQUAL_V); // > < = !=
+TokenPattern OPERATOR(2, {Token(KEYWORD_T, "AND"), Token(KEYWORD_T, "OR")}, true); // AND OR
+
+vector<TokenPattern> CONDITION_V({WHERE, ID, COMPARER, VALUE}); // WHERE ID >/</=/!= VALUE
+TokenPattern CONDITION(0, {}, false, CONDITION_V); // ID >/</=/!= VALUE
+vector<TokenPattern> NEXT_CONDITION_V({OPERATOR, ID, COMPARER, VALUE}); // ADN/OR ID >/</=/!= VALUE
+TokenPattern NEXT_CONDITION(0, {}, false, NEXT_CONDITION_V); // ADN/OR ID >/</=/!= VALUE
 
 // belows are sql patterns:
 
@@ -245,6 +306,10 @@ vector<bool> CREATE_TABLE_SQL_PATTERN_NEC({true, true, true, true, true, true, f
 // INSERT INTO ID (ID NEXT_ID) VALUES (VALUE, NEXT_VALUE) ;
 vector<TokenPattern> INSERT_INTO_SQL_PATTERN({INSERT, INTO, ID, LEFT_BRACKET, ID, NEXT_ID, RIGHT_BRACKET, VALUES, LEFT_BRACKET, VALUE, NEXT_VALUE, RIGHT_BRACKET, SEMICOLON});
 vector<bool> INSERT_INTO_SQL_PATTERN_NEC({true, true, true, true, true, false, true, true, true, true, false, true, true});
+
+// SELECT ID NEXT_ID FROM ID WHERE ID >/</=/!= ID AND/OR ID >/</=/!= ID;
+vector<TokenPattern>  SELECT_FROM_ONE_TABLE_SQL_PATTERN({SELECT, FIRST_COL, NEXT_ID, FROM, ID, CONDITION, NEXT_CONDITION, SEMICOLON});
+vector<bool>  SELECT_FROM_ONE_TABLE_SQL_PATTERN_NEC({true, true, false, true, true, false, false, true});
 
 class SqlPatternMatcher
 {
@@ -278,17 +343,19 @@ public:
             if (necessary[check_pattern])
             {
                 if (paterns[check_pattern].Match(tokens, check_offset))
+                {
                     check_offset += paterns[check_pattern].GetMatchLength();
+                }
                 else
+                {
                     return false;
+                }    
             }
             // if not, can match 0 - N times
             else
             {
-                // int match_times = 0;
                 while(paterns[check_pattern].Match(tokens, check_offset))
                 {
-                    // match_times++;
                     check_offset += paterns[check_pattern].GetMatchLength();
                 } 
             }
@@ -307,20 +374,23 @@ public:
 SqlPatternMatcher CREATE_DATABASE(CREATE_DATABASE_SQL_PATTERN, CREATE_DATABASE_SQL_PATTERN_NEC);
 SqlPatternMatcher CREATE_TABLE(CREATE_TABLE_SQL_PATTERN, CREATE_TABLE_SQL_PATTERN_NEC);
 SqlPatternMatcher INSERT_INTO_TABLE(INSERT_INTO_SQL_PATTERN, INSERT_INTO_SQL_PATTERN_NEC);
+SqlPatternMatcher SELECT_FROM_ONE_TABLE(SELECT_FROM_ONE_TABLE_SQL_PATTERN, SELECT_FROM_ONE_TABLE_SQL_PATTERN_NEC);
 
 // store all match tool for using
 vector<SqlPatternMatcher> ALL_PATTERNS(
     {
         CREATE_DATABASE, 
         CREATE_TABLE, 
-        INSERT_INTO_TABLE
+        INSERT_INTO_TABLE,
+        SELECT_FROM_ONE_TABLE
     }
 );
 vector<NodeType> ALL_PATTERNS_NODE_TYPE(
     {
         CREATE_DATABASE_NODE, 
         CREATE_TABLE_NODE, 
-        INSERT_INTO_TABLE_NODE
+        INSERT_INTO_TABLE_NODE,
+        SELECT_FROM_ONE_TABLE_NODE
     }
 );
 
@@ -348,7 +418,11 @@ public:
             sql = new InsertIntoTableSql(tokens);
             ast = new AST(INSERT_INTO_TABLE_NODE, sql);
             break;
-
+        case SELECT_FROM_ONE_TABLE_NODE:
+            sql = new SelectFromOneTableSql(tokens);
+            ast = new AST(SELECT_FROM_ONE_TABLE_NODE, sql);
+            break;
+            
         // TODO: more sql support is on designing
         default:
             throw std::runtime_error("Can not parse sql to node!");

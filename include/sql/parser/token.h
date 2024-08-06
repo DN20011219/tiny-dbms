@@ -30,10 +30,10 @@ struct Token {
 };
 
 static const std::string KEY_WORDS[] = {
-    "SELECT", "FROM", "WHERE", "INSERT", "INTO", "VALUES",
-    "UPDATE", "SET", "DELETE", "CREATE", "TABLE", "DROP",
-    "ALTER", "ADD", "COLUMN", "AND", "OR", "NOT", "IN",
-    "LIKE", "JOIN", "ON", "ORDER", "BY", "GROUP", "HAVING",
+    "SELECT", "FROM", "WHERE", "INSERT", "INTO", "VALUES", "CREATE", "TABLE", "DROP", // support base key word
+    "UPDATE", "SET", "DELETE", "ALTER", "ADD", "COLUMN", 
+    "AND", "OR", "NOT",  // support operator
+    "IN", "LIKE", "JOIN", "ON", "ORDER", "BY", "GROUP", "HAVING",
     "INT", "FLOAT", "VCHAR", "VECTOR",  // support data type
     "DATABASE"
 };
