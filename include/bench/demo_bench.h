@@ -106,21 +106,24 @@ namespace tiny_v_dbms {
 
     void ExecuteSQL()
     {   
+        cin.clear();
+
         Parser parser;
         NodeBuilder builder;
 
         while(true) {
+
             // input sql
             string sql;
             getline(cin, sql);
                 
             // seperate sql x
             std::vector<Token> tokens = Tokenize(sql);
-            cout << "tokens:" << endl;
+            cout << "tokens: ";
             PrintTokens(tokens);
 
             // parse sql 
-            NodeType node_type = NodeType::UNSUPPORT_NODE;
+            NodeType node_type;
             try {
                 node_type = parser.ParseSql(tokens);
                 cout << "success parse sql! " << node_type << endl;
@@ -130,7 +133,6 @@ namespace tiny_v_dbms {
             }
             
             // parse AST
-            // try {
             if (node_type != NodeType::UNSUPPORT_NODE) 
             {
                 AST* ast = builder.BuildNode(tokens, node_type);

@@ -79,6 +79,22 @@ SQL解析可以理解为一种编译手段，只不过编译的结果是一棵�
 查询语句(带条件)：SELECT id 其他id FROM id WHERE id 比较符 属性 其他比较;
 
 #### 2.分词器功能举例
+输入SQL:
+>  CREATE TABLE test_table ( id int, id2 vchar);
+
+通过分词器，将得到一个token列表，如下：
+> KEY_WORD: CREATE | KEY_WORD:TABLE | ID: test_table | op: ( | ID: id | KEY_WORD:int | ID: id2 | KEY_WORD:vchar | op: ) |
+
+创建表SQL语法如上节，通过匹配，可以识别出几个创建表所需的数据：
+> 表名：test_table
+列名列表：id, id2
+列类型列表：int, vchar
+
+上述实现可阅读include/sql/sql_pattern和include/sql/ast，两个文件实现了sql语法定义，sql语意解析，构建AST的过程。
 #### 3.总结
+词法解析最终得到的是一棵可以用于规划执行计划的语法树。不同类型的SQL得到的语法树结构是大不相同的，因此执行器需要针对每种SQL都设计对应的执行计划。
 ### 3.1.3 执行器
-2、存储引擎
+拿到了语法树，最后一步就是解析执行。
+执行器将AST转换为系统的执行计划，通过顺序/递归等方式构建系统中各个函数的执行流程。
+
+## 3.2、存储引擎

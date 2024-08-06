@@ -8,6 +8,7 @@
 #define VDBMS_SQL_PASRSER_AST_H_
 
 #include <vector>
+#include <map>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -17,6 +18,7 @@
 #include "token.h"
 
 using std::vector;
+using std::map;
 using std::string;
 using std::stringstream;
 
@@ -69,23 +71,62 @@ enum Comparator
     EQUAL,
     NOT_EQUAL
 };
-struct Compare  // such as a == b, a <> b, a > b
+Comparator SwitchComparator(string value)
 {
-    void* left_leaf;
+    if (value == ">")
+    {
+        return Comparator::BIGGER;
+    } 
+    else if (value == "<")
+    {
+        return Comparator::LESS;
+    } 
+    else if (value == "=")
+    {
+        return Comparator::EQUAL;
+    } 
+    else if (value == "!=")
+    {
+        return Comparator::NOT_EQUAL;
+    } 
+    else 
+    {
+        throw std::runtime_error("value: " + value + " can not be parsed to Comparator");
+    }
+}
+struct Compare  // such as a = b, a != b, a > b, a < b
+{
+    Column* col;
     Comparator condition;
-    void* right_leaf;
+    string compare_value;
 };
 
-enum SetOperator
+enum Operator
 {
     AND,
     OR
 };
-struct SetOperation
+Operator SwitchOperator(string value)
 {
-    void* left_leaf;
-    SetOperator condition;
-    void* right_leaf;
+    if (value == "AND")
+    {
+        return Operator::AND;
+    } 
+    else if (value == "OR")
+    {
+        return Operator::OR;
+    } 
+    else 
+    {
+        throw std::runtime_error("value: " + value + " can not be parsed to Operator");
+    }
+}
+struct Operation
+{
+    Compare* left_leaf;
+    Operation* left_op;
+    Operator opreator;
+    Compare* right_leaf;
 };
 
 // sql struct 
@@ -168,7 +209,7 @@ private:
     vector<Value> values;
 
 public:
-     // extract information from tokens
+    // extract information from tokens
     InsertIntoTableSql(vector<Token> tokens)
     {   
         // example sql : 
@@ -232,11 +273,158 @@ class SelectFromOneTableSql : public Sql
 private:  
     string table_name;
     vector<Column> columns;
+    // map<string, Column*> column_map;
     vector<Compare> compare_vector;
-    vector<SetOperation> set_operation_vector;
+    vector<Operation> operation_vector;
 
 public:
-    // TODO:
+    // extract information from tokens
+    SelectFromOneTableSql(vector<Token> tokens)
+    {
+        // SELECT * FROM table1;
+        // SELECT a, b FROM table1 where c > 0 AND d = 1;
+
+        // set select col, begin from offset 1
+        int token_flag = 1;
+        bool pre_is_asterisk = false;
+        while(token_flag < tokens.size())
+        {
+            // if find FROM, then break
+            if (tokens[token_flag].type == TokenType::KEYWORD_T && tokens[token_flag].value == "FROM")
+            {
+                break;
+            }
+
+            // if pre is *, and still have col, this sql is wrong!
+            if (pre_is_asterisk)
+            {
+                throw std::runtime_error("Sql wrong, * can not be used with other column name");
+            }
+
+            // skip ,
+            if (tokens[token_flag].type == TokenType::OPERATOR_T && tokens[token_flag].value == ",")
+            {
+                token_flag++;
+                continue;
+            }
+            // build one new column object, and set it's col_name
+            Column* cache_column = new Column();
+            cache_column->col_name = tokens[token_flag].value;
+            columns.push_back(*cache_column);
+            token_flag++;
+
+            // if this col is *, set pre_is_asterisk is true, means follows must be FROM,
+            if (tokens[token_flag].value == "*")
+            {
+                pre_is_asterisk = true;
+            }
+        }
+
+        // skip FROM
+        token_flag++;
+
+        // set table name
+        table_name = tokens[token_flag].value;
+        token_flag++;
+
+        // try get where condition
+        Compare* pre_compare = nullptr;
+        Operation* pre_op = nullptr;
+        while(token_flag < tokens.size())
+        {
+            // if find ;, then break
+            if (tokens[token_flag].type == TokenType::OPERATOR_T && tokens[token_flag].value == ";")
+            {
+                break;
+            }
+
+            // try match 4 tokens one time: "AND"/"OR" col_name comparator value
+            if ((tokens[token_flag].value == "AND" || tokens[token_flag].value == "OR"))
+            {
+                // pre_compare == nullptr, means use AND/ OR alone, this is not allowed
+                if (pre_compare == nullptr && pre_op == nullptr)
+                {
+                    throw std::runtime_error("Sql wrong, use AND/OR but has no pre condition");
+                }
+
+                // try match another 3 tokens
+                if (
+                    tokens[token_flag + 1].type == IDENTIFIER_T 
+                    && tokens[token_flag + 2].type == OPERATOR_T 
+                    && (tokens[token_flag + 3].type == NUMBER_T || tokens[token_flag + 3].type == STRING_T)
+                    ) 
+                {
+                    // buil Compare
+                    Compare new_compare;
+                    Column compare_column; compare_column.col_name = tokens[token_flag + 1].value;
+                    new_compare.col = &compare_column;
+                    new_compare.condition = SwitchComparator(tokens[token_flag + 2].value);
+                    new_compare.compare_value = tokens[token_flag + 3].value;
+                    // store Compare
+                    compare_vector.push_back(new_compare);
+
+                    // buil Operation
+                    Operation op;
+                    if (pre_compare == nullptr) 
+                    {
+                        op.left_op = pre_op;
+                    }
+                    else 
+                    {
+                        op.left_leaf = pre_compare;
+                        pre_compare = nullptr;
+                    }
+                    op.opreator = SwitchOperator(tokens[token_flag].value);
+                    op.right_leaf = &new_compare;
+                    // cache op to pre_op
+                    pre_op = &op;
+                    // store Operation
+                    operation_vector.push_back(op);
+
+                    token_flag += 4;
+                } 
+                else
+                {
+                    throw std::runtime_error("Sql wrong, condition can not be parse");
+                }
+
+                continue;
+            }
+
+            // try match 3 tokens one time: col_name comparator value
+            if (
+                tokens[token_flag + 1].type == IDENTIFIER_T 
+                && tokens[token_flag + 2].type == OPERATOR_T 
+                && (tokens[token_flag + 3].type == NUMBER_T || tokens[token_flag + 3].type == STRING_T)
+                ) 
+            {
+                // build Compare
+                Compare new_compare;
+                Column compare_column; compare_column.col_name = tokens[token_flag + 1].value;
+                new_compare.col = &compare_column;
+                new_compare.condition = SwitchComparator(tokens[token_flag + 2].value);
+                new_compare.compare_value = tokens[token_flag + 3].value;
+                // store Compare
+                compare_vector.push_back(*pre_compare);
+                // cache new_compare to pre_compare 
+                pre_compare = &new_compare;
+
+                token_flag += 3;
+                continue;
+            }
+
+            // can not match any type of condition, break
+            break;
+        }
+
+        // check sql has been parsed end
+        if (token_flag == tokens.size() - 1 && tokens[token_flag].type == TokenType::OPERATOR_T && tokens[token_flag].value == ";")
+        {
+            return;
+        }
+
+        throw std::runtime_error("Sql wrong, not end with ; or can not be parsed");
+    }
 };
 // TODO:Select using join
 // struct SelectFromTableWithJoinSql
@@ -292,6 +480,9 @@ public:
         case INSERT_INTO_TABLE_NODE:
             delete insert_into_table_sql;
             break;
+        case SELECT_FROM_ONE_TABLE_NODE:
+            delete select_from_one_table_sql;
+            break;
         // TODO: more sql support is on designing
         default:
             break;
@@ -312,6 +503,9 @@ public:
             case NodeType::INSERT_INTO_TABLE_NODE:
                 insert_into_table_sql = static_cast<InsertIntoTableSql*>(data);
                 break;
+            case NodeType::SELECT_FROM_ONE_TABLE_NODE:
+                select_from_one_table_sql = static_cast<SelectFromOneTableSql*>(data);
+                break;
             default:
                 throw std::runtime_error("can not init AST!");
         }
@@ -327,41 +521,57 @@ public:
         stringstream ss;
         switch (node_type)
         {
-        case CREATE_DATABASE_NODE:
-        {
-            ss << "CREATE DATABASE " << create_database_sql->db_name << ";";
-            break;
-        }
-        case CREATE_TABLE_NODE:
-        {
-            ss << "CREATE TABLE " << create_table_sql->table_name << " (";
-            for (const auto& column : create_table_sql->columns)
+            case CREATE_DATABASE_NODE:
             {
-                ss << column.col_name << " " << column.value_type << ", ";
+                ss << "CREATE DATABASE " << create_database_sql->db_name << ";";
+                break;
             }
-            ss << ");";
-            break;
-        }
-        case INSERT_INTO_TABLE_NODE:
-        {
-            ss << "INSERT INTO " << insert_into_table_sql->table_name << " (";
-            for (const auto& column : insert_into_table_sql->columns)
+            case CREATE_TABLE_NODE:
             {
-                ss << column.col_name << ", ";
+                ss << "CREATE TABLE " << create_table_sql->table_name << " (";
+                for (const auto& column : create_table_sql->columns)
+                {
+                    ss << column.col_name << " " << column.value_type << ", ";
+                }
+                ss << ");";
+                break;
             }
-            ss << ") VALUES (";
-            for (const auto& value : insert_into_table_sql->values)
+            case INSERT_INTO_TABLE_NODE:
             {
-                ss << value.ToString() << ", ";
+                ss << "INSERT INTO " << insert_into_table_sql->table_name << " (";
+                for (const auto& column : insert_into_table_sql->columns)
+                {
+                    ss << column.col_name << ", ";
+                }
+                ss << ") VALUES (";
+                for (const auto& value : insert_into_table_sql->values)
+                {
+                    ss << value.ToString() << ", ";
+                }
+                ss << ");";
+                break;
             }
-            ss << ");";
-            break;
+            case SELECT_FROM_ONE_TABLE_NODE:
+            {
+                ss << "SELECT ";
+                for (const auto& column : select_from_one_table_sql->columns) {
+                    ss << column.col_name << ", ";
+                }
+                ss << " FROM " << select_from_one_table_sql->table_name;
+                if (!select_from_one_table_sql->compare_vector.empty()) {
+                    ss << " WHERE ";
+                    for (const auto& condition : select_from_one_table_sql->compare_vector) {
+                        ss << condition.col << condition.condition << condition.compare_value << " ";
+                    }
+                }
+                break;
+            }
+            // TODO: more sql support is on designing
+            default:
+                ss << "Unknown node type";
+                break;
         }
-        // TODO: more sql support is on designing
-        default:
-            ss << "Unknown node type";
-            break;
-        }
+
         return ss.str();
     }
 };
