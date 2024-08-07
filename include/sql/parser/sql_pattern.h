@@ -116,20 +116,17 @@ public:
     // mainly used to check support data type (types are defined as KEYWORD)
     bool RangeCheck(vector<Token> input_tokens, int begin_check_offset)
     {
-        int template_check_offset = 0;
+        // int template_check_offset = 0;
         // try match tokens_template
-        while (template_check_offset < tokens_num)
+        for (Token token : tokens_template)
         {
-            if (begin_check_offset + template_check_offset >= input_tokens.size())
-                return false;
-            // check every token's type and value, if anyone match the template, return true
-            switch (tokens_template[template_check_offset].type)
+            switch (token.type)
             {
                 case KEYWORD_T: {    // to KEY_WORD, must check the KEY_WORD value, such as SELECT, CREATE
                     if (
-                        input_tokens[begin_check_offset + template_check_offset].type == KEYWORD_T 
+                        input_tokens[begin_check_offset].type == KEYWORD_T 
                         || 
-                        input_tokens[begin_check_offset + template_check_offset].value == tokens_template[template_check_offset].value
+                        input_tokens[begin_check_offset].value == token.value
                         ) 
                     {
                         match_length = 1;
@@ -138,7 +135,7 @@ public:
                 } break;
                 case IDENTIFIER_T: {    // to ID, not need to further check
                     if (
-                        input_tokens[begin_check_offset + template_check_offset].type == IDENTIFIER_T 
+                        input_tokens[begin_check_offset].type == IDENTIFIER_T 
                         ) 
                     {
                         match_length = 1;
@@ -147,9 +144,9 @@ public:
                 } break;
                 case OPERATOR_T: {    // to OPERATOR, must check the value, such as , ( )
                     if (
-                        input_tokens[begin_check_offset + template_check_offset].type == OPERATOR_T 
+                        input_tokens[begin_check_offset].type == OPERATOR_T 
                         && 
-                        input_tokens[begin_check_offset + template_check_offset].value == tokens_template[template_check_offset].value
+                        input_tokens[begin_check_offset].value == token.value
                         ) 
                     {
                         match_length = 1;
@@ -158,9 +155,9 @@ public:
                 } break;
                 case NUMBER_T: {    // to VALUE token(NUMBER_T, STRING_T), maybe need more check, but now we only check if it's a VALUE
                     if (
-                        input_tokens[begin_check_offset + template_check_offset].type == NUMBER_T 
+                        input_tokens[begin_check_offset].type == NUMBER_T 
                         || 
-                        input_tokens[begin_check_offset + template_check_offset].type == STRING_T
+                        input_tokens[begin_check_offset].type == STRING_T
                         )
                     {
                         match_length = 1;
@@ -169,9 +166,9 @@ public:
                 } break;
                 case STRING_T: {    // as same as the NUMBER_T
                     if (
-                        input_tokens[begin_check_offset + template_check_offset].type == NUMBER_T 
+                        input_tokens[begin_check_offset].type == NUMBER_T 
                         ||
-                        input_tokens[begin_check_offset + template_check_offset].type == STRING_T
+                        input_tokens[begin_check_offset].type == STRING_T
                         )
                     {
                         match_length = 1;
@@ -181,22 +178,21 @@ public:
                 default:
                     return false;
             }
-            template_check_offset++;
         }
 
-        // if type is range check and next_patterns not empty, 
-        // then try to match any one of next_patterns, if matched anyone of next, return true.
-        int next_template_check_offset = 0;
-        while (next_template_check_offset < next_patterns.size())
+        // if next_patterns not empty, 
+        // then try to match any one of next_patterns, if matched anyone of next, return true and set match_length as the matched pattern length.
+        for (TokenPattern next_pattern: next_patterns)
         {
-            if (next_patterns[next_template_check_offset].Match(input_tokens, begin_check_offset))
+            if (next_pattern.Match(input_tokens, begin_check_offset))
             {
-                match_length = next_patterns[next_template_check_offset].GetMatchLength();
+                match_length = next_pattern.GetMatchLength();
                 return true;
             }
-            next_template_check_offset++;
         }
-        
+
+        // not matched anyone pattern, set match_length as 0
+        match_length = 0;
         return false;
     }
 
