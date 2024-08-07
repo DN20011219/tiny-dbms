@@ -96,7 +96,7 @@ Comparator SwitchComparator(string value)
 }
 struct Compare  // such as a = b, a != b, a > b, a < b
 {
-    Column* col;
+    Column col;
     Comparator condition;
     string compare_value;
 };
@@ -123,10 +123,10 @@ Operator SwitchOperator(string value)
 }
 struct Operation
 {
-    Compare* left_leaf;
+    Compare left_leaf;
     Operation* left_op;
     Operator opreator;
-    Compare* right_leaf;
+    Compare right_leaf;
 };
 
 // sql struct 
@@ -338,10 +338,10 @@ public:
                 break;
             }
 
-            // try match 4 tokens one time: "AND"/"OR" col_name comparator value
-            if ((tokens[token_flag].value == "AND" || tokens[token_flag].value == "OR"))
+            // try match 4/5 tokens one time: "AND"/"OR" col_name comparator value
+            if (tokens[token_flag].type == TokenType::KEYWORD_T && (tokens[token_flag].value == "AND" || tokens[token_flag].value == "OR"))
             {
-                // pre_compare == nullptr, means use AND/ OR alone, this is not allowed
+                // pre_compare == nullptr, means use AND/ OR but there has no pre compare, this is not allowed
                 if (pre_compare == nullptr && pre_op == nullptr)
                 {
                     throw std::runtime_error("Sql wrong, use AND/OR but has no pre condition");
@@ -357,43 +357,83 @@ public:
                     // buil Compare
                     Compare new_compare;
                     Column compare_column; compare_column.col_name = tokens[token_flag + 1].value;
-                    new_compare.col = &compare_column;
+                    new_compare.col = std::move(compare_column);
                     new_compare.condition = SwitchComparator(tokens[token_flag + 2].value);
                     new_compare.compare_value = tokens[token_flag + 3].value;
                     // store Compare
-                    compare_vector.push_back(new_compare);
+                    compare_vector.push_back(std::move(new_compare));
 
                     // buil Operation
                     Operation op;
                     if (pre_compare == nullptr) 
                     {
-                        op.left_op = pre_op;
+                        op.left_op = std::move(pre_op);
                     }
                     else 
                     {
-                        op.left_leaf = pre_compare;
+                        op.left_leaf = std::move(*pre_compare);
                         pre_compare = nullptr;
                     }
                     op.opreator = SwitchOperator(tokens[token_flag].value);
-                    op.right_leaf = &new_compare;
+                    op.right_leaf = std::move(new_compare);
+
                     // cache op to pre_op
                     pre_op = &op;
                     // store Operation
-                    operation_vector.push_back(op);
+                    operation_vector.push_back(std::move(op));
 
                     token_flag += 4;
+                    continue;
                 } 
-                else
+                
+                // try match another 4 tokens, != <> maybe need 2 token
+                if (                    
+                    tokens[token_flag + 1].type == IDENTIFIER_T 
+                    && tokens[token_flag + 2].type == OPERATOR_T 
+                    && tokens[token_flag + 3].type == OPERATOR_T 
+                    && (tokens[token_flag + 4].type == NUMBER_T || tokens[token_flag + 4].type == STRING_T))
                 {
-                    throw std::runtime_error("Sql wrong, condition can not be parse");
+                    
+                    // buil Compare
+                    Compare new_compare;
+                    Column compare_column; compare_column.col_name = tokens[token_flag + 1].value;
+                    new_compare.col = std::move(compare_column);
+                    new_compare.condition = SwitchComparator(tokens[token_flag + 2].value + tokens[token_flag + 3].value);
+                    new_compare.compare_value = tokens[token_flag + 3].value;
+                    // store Compare
+                    compare_vector.push_back(std::move(new_compare));
+
+                    // buil Operation
+                    Operation op;
+                    if (pre_compare == nullptr) 
+                    {
+                        op.left_op = std::move(pre_op);
+                    }
+                    else 
+                    {
+                        op.left_leaf = std::move(*pre_compare);
+                        pre_compare = nullptr;
+                    }
+                    op.opreator = SwitchOperator(tokens[token_flag].value);
+                    op.right_leaf = std::move(new_compare);
+
+                    // cache op to pre_op
+                    pre_op = &op;
+                    // store Operation
+                    operation_vector.push_back(std::move(op));
+
+                    token_flag += 5;
+                    continue;
                 }
 
-                continue;
+                // can not match any compare, throw error
+                throw std::runtime_error("Sql wrong, condition can not be parse");
             }
 
-            // try match 3 tokens one time: col_name comparator value
+            // try match 4 tokens one time: WHERE col_name comparator value
             if (
-                tokens[token_flag + 1].type == IDENTIFIER_T 
+                tokens[token_flag].value == "WHERE"
+                && tokens[token_flag + 1].type == IDENTIFIER_T 
                 && tokens[token_flag + 2].type == OPERATOR_T 
                 && (tokens[token_flag + 3].type == NUMBER_T || tokens[token_flag + 3].type == STRING_T)
                 ) 
@@ -401,15 +441,16 @@ public:
                 // build Compare
                 Compare new_compare;
                 Column compare_column; compare_column.col_name = tokens[token_flag + 1].value;
-                new_compare.col = &compare_column;
+                new_compare.col = std::move(compare_column);
                 new_compare.condition = SwitchComparator(tokens[token_flag + 2].value);
                 new_compare.compare_value = tokens[token_flag + 3].value;
+
                 // store Compare
-                compare_vector.push_back(*pre_compare);
+                compare_vector.push_back(std::move(new_compare));
                 // cache new_compare to pre_compare 
                 pre_compare = &new_compare;
 
-                token_flag += 3;
+                token_flag += 4;
                 continue;
             }
 
@@ -418,12 +459,10 @@ public:
         }
 
         // check sql has been parsed end
-        if (token_flag == tokens.size() - 1 && tokens[token_flag].type == TokenType::OPERATOR_T && tokens[token_flag].value == ";")
+        if (!(token_flag == tokens.size() - 1 && tokens[token_flag].type == TokenType::OPERATOR_T && tokens[token_flag].value == ";"))
         {
-            return;
-        }
-
-        throw std::runtime_error("Sql wrong, not end with ; or can not be parsed");
+            throw std::runtime_error("Sql wrong, not end with ; or can not be parsed");
+        }   
     }
 };
 // TODO:Select using join
@@ -561,7 +600,7 @@ public:
                 if (!select_from_one_table_sql->compare_vector.empty()) {
                     ss << " WHERE ";
                     for (const auto& condition : select_from_one_table_sql->compare_vector) {
-                        ss << condition.col << condition.condition << condition.compare_value << " ";
+                        ss << condition.col.col_name << " " << condition.condition << " " << condition.compare_value << " ";
                     }
                 }
                 break;
