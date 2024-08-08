@@ -9,7 +9,7 @@
 
 #include <map>
 #include <string>
-#include <mutex>
+#include <shared_mutex>
 
 #include "../db/db.h"
 #include "../table/column_table.h"
@@ -20,14 +20,17 @@
 
 using std::map;
 using std::string;
-using std::mutex;
+using std::shared_mutex;
+using std::shared_lock;
 
 namespace tiny_v_dbms {
 
 class DatabaseControllSlot
 {
+    friend class DatabaseManager;
+
     DB db;
-    mutex read_or_write_mutex;
+    shared_mutex read_or_write_mutex;
 
 public:
 
@@ -52,6 +55,7 @@ private:
     FileManagement* fm;
 public:
 
+    // When create a DatabaseManager, it will open the default db automically
     DatabaseManager()
     {
         bfmm = new BlockFileManagement();
@@ -70,6 +74,7 @@ public:
     ~DatabaseManager()
     {
         delete bfmm;
+        delete fm;
     }
 
     // When DatabaseManager is created, it will open the default db automatically, this db has all db's header information.
@@ -89,6 +94,12 @@ public:
             new_table.Deserialize(table_block.data, table_block.tables_begin_address[tables_num]);
             db.tables.emplace_back(new_table);
             tables_num--;
+        }
+        
+        // read next blocks if exist
+        if (table_block.next_block_pointer != 0x0)
+        {
+            LoadTables(db, db.db_all_tables_path, table_block.next_block_pointer);
         }
         
         return true;
@@ -124,7 +135,45 @@ public:
     // The change of db_file, table_header will be not be saved or read by other thread;
     bool OpenDbForRead(string db_name, DB& db)
     {
+        if (db_name == DEFAULT_DB_FILE_NAME)
+        {
+            throw std::runtime_error("Can not open base db for user");
+        }
 
+        // try find db in map
+        
+        if (opened_db.find(db_name) != opened_db.end())
+        {
+            std::shared_lock<shared_mutex> lck(opened_db[db_name].read_or_write_mutex);
+            db = opened_db[db_name].db;
+            return true;
+        }
+
+        // open db file and table header
+        DB new_db;
+        string table_header_file_url = CalFileUrlUtil::GetDefaultDbFile(db_name);
+        char* data;
+        new_db.DeserializeDBFile(data, fm->ReadFile(CalFileUrlUtil::GetDefaultDbFile(DEFAULT_DB_FILE_NAME), data));
+
+        // read the first block of deafult table
+        TableBlock table_block;
+        bfmm->ReadOneTableBlock(db.db_all_tables_path, 0, table_block);
+
+        default_amount_type tables_num = table_block.table_amount;
+        while(tables_num > 0)
+        {
+            ColumnTable new_table;
+            new_table.Deserialize(table_block.data, table_block.tables_begin_address[tables_num]);
+            db.tables.emplace_back(new_table);
+            tables_num--;
+        }
+        
+        // read next blocks if exist
+        if (table_block.next_block_pointer != 0x0)
+        {
+            LoadTables(db, table_header_file_url, table_block.next_block_pointer);
+        }
+        return true;
     }
 
     // Try open one db, if opened, set db_pointer as the address of DB and return true, else set null_ptr and return false

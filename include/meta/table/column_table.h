@@ -53,9 +53,16 @@ public:
         column_size = 0;
     }
 
+    ColumnTable(const ColumnTable& table)
+    {
+        table_name = table.table_name;
+        table_type = table.table_type;
+        column_size = table.column_size;
+        columns = table.columns;
+    }
+
     ~ColumnTable()
     {
-
     }
 
     ColumnTable(const ColumnTable &&t)
