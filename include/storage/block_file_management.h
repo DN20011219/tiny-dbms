@@ -16,6 +16,8 @@
 #include <sys/types.h>
 #include <dirent.h>
 
+#include "../meta/block/data_block.h"
+#include "../meta/block/table_block.h"
 #include "../config.h"
 
 namespace tiny_v_dbms {
@@ -199,6 +201,54 @@ public:
         default_length_size block_size = BLOCK_SIZE;
         file_stream.seekg(block_address * block_size, std::ios::beg);
         file_stream.read(data, block_size);
+    }
+
+
+       /**
+     * Reads a table block from a file
+     * @param table_file_uri The URI of the table file
+     * @param offset The offset of the block in the file
+     * @param new_block The TableBlock object to store the read data
+    */
+    void ReadOneTableBlock(string table_file_uri, default_address_type offset, TableBlock& new_block)
+    {
+        fstream file_stream;
+        OpenTableFile(table_file_uri, file_stream);    // open table header file, like "test.tvdbb"
+        ReadFromFile(file_stream, offset, new_block.data);
+        new_block.DeserializeFromBuffer(new_block.data);
+        file_stream.close();
+    }
+
+    /**
+     * Reads a data block from a file
+     * @param data_file_uri The URI of the data file
+     * @param offset The offset of the block in the file
+     * @param new_block The DataBlock object to store the read data
+    */
+    void ReadOneDataBlock(string data_file_uri, default_address_type offset, DataBlock& new_block)
+    {
+        fstream file_stream;
+        OpenDataFile(data_file_uri, file_stream);    // open table header file, like "test.data"
+        ReadFromFile(file_stream, offset, new_block.data);
+        new_block.DeserializeFromBuffer(new_block.data);
+        file_stream.close();
+    }
+
+    void WriteBackTableBlock(string table_file_uri, default_address_type offset, TableBlock& block)
+    {
+        fstream file_stream;
+        OpenTableFile(table_file_uri, file_stream);   // open table header file, like "test.tvdbb"   
+        WriteBackBlock(file_stream, offset, block.data);
+        file_stream.close();
+    }
+
+    void WriteBackDataBlock(string data_file_uri, default_address_type offset, DataBlock& block)
+    {
+        block.Serialize();
+        fstream file_stream;
+        OpenDataFile(data_file_uri, file_stream);    // open data file, like "test.data"   
+        WriteBackBlock(file_stream, offset, block.data);
+        file_stream.close();
     }
 private:
 

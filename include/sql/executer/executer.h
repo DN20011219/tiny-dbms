@@ -9,6 +9,16 @@
 
 namespace tiny_v_dbms {
 
+enum ExecutionState
+{
+    PREPARE,
+    EXECUTING,
+    WAITING,
+    FINISH,
+    ERROR
+};
+
+
 
 class SqlExecuter
 {

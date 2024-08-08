@@ -58,12 +58,12 @@ private:
 
     ~MemoryManagement()
     {
-        std::cout << "____MemoryManagement on deleted___" << std::endl;
+        // std::cout << "____MemoryManagement on deleted___" << std::endl;
         delete[] data_memory_blocks;
         delete[] table_memory_blocks;
         delete[] data_replacer;
         delete[] table_replacer;
-        std::cout << "____MemoryManagement has been deleted___" << std::endl;
+        // std::cout << "____MemoryManagement has been deleted___" << std::endl;
     }
 
     MemoryManagement(const MemoryManagement &signal);

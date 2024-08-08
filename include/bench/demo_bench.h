@@ -154,9 +154,6 @@ namespace tiny_v_dbms {
             {
             case 'Q': // quit
                 return;
-            case 'T': // test
-                cout << "test" << std::endl;
-                break;
             case 'I': // install
                 InstallDBMS();
                 break;
