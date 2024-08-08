@@ -10,7 +10,26 @@
 
 namespace tiny_v_dbms {
 
+enum SqlExecutePlanType
+{
+    CREATE_DATABASE_PLAN,
+    CREATE_TABLE_PLAN,
+    INSERT_INTO_TABLE_PLAN,
+    SELECT_FROM_SINGLE_TABLE_PLAN
+};
 
+class SqlExecutePlan
+{
+
+private:
+
+    SqlExecutePlanType plan_type;
+    
+
+public:
+
+
+};
 
 }
 

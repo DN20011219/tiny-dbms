@@ -26,7 +26,7 @@ class FileManagement
 public:
     
     // not used read
-    void ReadFile(string& file_dir, char* memory_pointer) {
+    default_length_size ReadFile(string file_dir, char* memory_pointer) {
         std::ifstream file(file_dir, ios::binary);
         if (!file) {
             throw std::runtime_error("Failed to open file for reading");
@@ -36,9 +36,11 @@ public:
         file.seekg(0, ios::beg);
         file.read(memory_pointer, file_size);
         file.close();
+
+        return file_size;
     }
 
-    void WriteFile(string& file_dir, const char* memory_pointer, default_length_size data_size) {
+    void WriteFile(string file_dir, const char* memory_pointer, default_length_size data_size) {
         std::ofstream file(file_dir, ios::binary);
         if (!file) {
             throw std::runtime_error("Failed to open file for writing");
@@ -74,7 +76,7 @@ public:
 
     // open a read stream to input file_path
     // if file not exist, create one and open it
-    std::ifstream ReadOrCreateFile(const string& file_path)
+    std::ifstream ReadOrCreateFile(const string file_path)
     {
         std::ifstream file_write;
 

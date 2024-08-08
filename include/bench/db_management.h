@@ -36,7 +36,7 @@ private:
     string GetInstallPath() 
     {
         string install_path;
-
+        
         std::ifstream file_read = file_mm->ReadOrCreateFile(INSTALL_PATH_CACHE_FILE);
         getline(file_read, install_path);
         file_read.close();

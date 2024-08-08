@@ -303,9 +303,12 @@ vector<bool> CREATE_TABLE_SQL_PATTERN_NEC({true, true, true, true, true, true, f
 vector<TokenPattern> INSERT_INTO_SQL_PATTERN({INSERT, INTO, ID, LEFT_BRACKET, ID, NEXT_ID, RIGHT_BRACKET, VALUES, LEFT_BRACKET, VALUE, NEXT_VALUE, RIGHT_BRACKET, SEMICOLON});
 vector<bool> INSERT_INTO_SQL_PATTERN_NEC({true, true, true, true, true, false, true, true, true, true, false, true, true});
 
-// SELECT ID NEXT_ID FROM ID WHERE ID >/</=/!= ID AND/OR ID >/</=/!= ID;
+// SELECT ID NEXT_ID FROM ID WHERE ID >/</=/!= VALUE AND/OR ID >/</=/!= VALUE;
 vector<TokenPattern>  SELECT_FROM_ONE_TABLE_SQL_PATTERN({SELECT, FIRST_COL, NEXT_ID, FROM, ID, CONDITION, NEXT_CONDITION, SEMICOLON});
 vector<bool>  SELECT_FROM_ONE_TABLE_SQL_PATTERN_NEC({true, true, false, true, true, false, false, true});
+
+// SELECT ID NEXT_ID FROM ID INNER JOIN ID ON ID = ID WHERE ID >/</=/!= VALUE
+
 
 class SqlPatternMatcher
 {

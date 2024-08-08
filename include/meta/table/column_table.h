@@ -58,12 +58,14 @@ public:
 
     }
 
-    /**
-    * @brief return the space cost of this table header.
-    */
-    // default_length_size GetSize() {
-    //     return sizeof(string) * 2 + sizeof(default_amount_type) + (sizeof(string) + sizeof(default_enum_type) * 2 + sizeof(default_address_type)) * column_size;
-    // }
+    ColumnTable(const ColumnTable &&t)
+    {
+        table_name = std::move(t.table_name);
+        table_type = std::move(t.table_type);
+        column_size = std::move(t.column_size);
+        columns = std::move(t.columns);
+    }
+
 
     /**
      * Inserts a new column into the table.
