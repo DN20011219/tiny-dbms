@@ -10,6 +10,7 @@
 #include <map>
 #include <string>
 #include <shared_mutex>
+#include <mutex>
 
 #include "../db/db.h"
 #include "../table/column_table.h"
@@ -18,10 +19,12 @@
 #include "../../utils/cal_file_url_util.h"
 #include "../../config.h"
 
+
 using std::map;
 using std::string;
 using std::shared_mutex;
 using std::shared_lock;
+using std::lock_guard;
 
 namespace tiny_v_dbms {
 
@@ -30,7 +33,7 @@ class DatabaseControllSlot
     friend class DatabaseManager;
 
     DB db;
-    shared_mutex read_or_write_mutex;
+    // shared_mutex read_or_write_mutex;
 
 public:
 
@@ -50,6 +53,9 @@ class DatabaseManager
 
 private:
     map<string, DatabaseControllSlot> opened_db;
+    map<string, shared_mutex*> opened_db_mutex;
+
+    // vector<lock_guard<shared_mutex>*> locks;
 
     BlockFileManagement* bfmm;
     FileManagement* fm;
@@ -141,10 +147,11 @@ public:
         }
 
         // try find db in map
-        
         if (opened_db.find(db_name) != opened_db.end())
         {
-            std::shared_lock<shared_mutex> lck(opened_db[db_name].read_or_write_mutex);
+            // lock the mutex at read mode
+            lock_guard<shared_mutex>(*opened_db_mutex[db_name]);
+            
             db = opened_db[db_name].db;
             return true;
         }
@@ -173,6 +180,13 @@ public:
         {
             LoadTables(db, table_header_file_url, table_block.next_block_pointer);
         }
+
+        // copy db
+        db = new_db;
+        
+        // add to map
+        opened_db[db_name] = DatabaseControllSlot(new_db);
+        opened_db_mutex[db_name] = new shared_mutex();
         return true;
     }
 

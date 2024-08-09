@@ -29,6 +29,19 @@ public:
 
     DB() = default;
 
+    DB(const DB& db)
+    {
+        db_name = db.db_name;
+        db_description = db.db_description;
+        db_all_tables_path = db.db_all_tables_path;
+
+        tables.resize(db.tables.size());
+        for (int i = 0; i < db.tables.size(); i++)
+        {
+            tables[i] = tables[i];
+        }
+    }
+
     // store a db object to string
     string SerializeDBFile()
     {   
