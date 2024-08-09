@@ -43,8 +43,8 @@ public:
         // cache all blocks add pointer and block map, so can find block using data pointer, could be used in release block
         for(int i = 0; i < max_block_amount; i++)
         {
-            char* data= blocks[max_block_amount].data;
-            std::pair<char*, MemoryBlockSlot*> pair(data, &blocks[max_block_amount]);
+            // char* data= blocks[max_block_amount].data;
+            std::pair<char*, MemoryBlockSlot*> pair(blocks[max_block_amount].data, &blocks[max_block_amount]);
             data_block_map.insert(pair);
         }
         // std::cout << "init free_blocks size: " << free_blocks.size() << std::endl;
@@ -72,6 +72,11 @@ public:
         return true;
     }
     
+    bool LoadTableData()
+    {
+
+    }
+
     // release one block
     // if not controlled by replacer, do nothing, return false
     // else release it, delete it from used list and add to free list,unlock the mutex, set information on block empty, return true
