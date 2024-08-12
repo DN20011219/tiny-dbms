@@ -40,6 +40,8 @@ enum UserIdentity
 };
 struct Session
 {
+    long msg_queue_id;  // this id will store the queue used to communicate
+
     UserIdentity connector_identity;
     string connect_db_name;
 
@@ -47,11 +49,6 @@ struct Session
     int client_port;
 
     bool connect_state; // True means this connection is in use and connect success
-
-    void Deserialize(char* buffer)
-    {
-
-    }
 
     void Serialize(char* buffer) {
         int offset = 0;
@@ -94,8 +91,21 @@ struct SqlResponse
 {
     SqlState sql_state;
     string information;
-};
 
+    void Serialize(char* buffer)
+    {
+        default_address_type offset = 0;
+
+        memcpy(buffer, &sql_state, sizeof(SqlState));
+        offset += sizeof(SqlState);
+
+        int information_length = information.length();
+        memcpy(buffer + offset, &information_length, sizeof(int));
+        offset += sizeof(int);
+        
+        memcpy(buffer + offset, information.c_str(), information_length);
+    }
+};
 
 typedef struct ConnectMsg{
     long msg_type;
@@ -104,8 +114,18 @@ typedef struct ConnectMsg{
 
 typedef struct WorkMsg{
     long msg_type;
-    char msg_data[SQL_MSG_DATA_LENGTH]; // sql[200]: select * from a;
+    char msg_data[WORK_MSG_DATA_LENGTH]; // sql_length[4]: 16 | sql[196]: select * from a;
 }WorkMsg;
+
+#ifndef CONNECTOR_MSG_KEY
+#define CONNECTOR_MSG_KEY
+int connector_msg_key = msgget(CONNECTOR_MESSAGE_KEY, IPC_CREAT | 0755);
+#endif // CONNECTOR_MSGID
+
+#ifndef WORKER_MSG_KEY
+#define WORKER_MSG_KEY
+int worker_msg_key =  msgget(WORKER_MESSAGE_KEY, IPC_CREAT | 0755);
+#endif // WORKER_MSG_KEY
 
 class Worker
 {
@@ -125,9 +145,6 @@ private:
     std::condition_variable response_condVar;
 
     std::pair<std::thread*, std::thread*> fw_bg_threads;
-
-    // test
-    int exe_sql_num;
     
 public:
 
@@ -135,13 +152,13 @@ public:
     {
         user_session = user;
         working = true;
-        exe_sql_num = 0;
     }
 
     ~Worker()
     {
         working = false;
-        delete user_session;
+
+
     }
 
     void WorkThread()
@@ -150,39 +167,71 @@ public:
         {   
             // wait until executing_sql not empty
             std::unique_lock<std::mutex> lock(param_mutex);
-            param_condVar.wait(lock, [this]{return this->executing_sql != "";});
+            param_condVar.wait(lock);
             
             // execute sql
             cout << std::this_thread::get_id() <<  "input sql: " << executing_sql << endl;
             cout << "input executing_sql_response: " << executing_sql_response << endl;
-            exe_sql_num++;
-            cout << std::this_thread::get_id() << "exe_sql_num: " << exe_sql_num << endl;
 
             // write back result  
             std::unique_lock<std::mutex> response_lock(response_mutex);
             executing_sql_response->sql_state = SqlState::SUCCESS;
             executing_sql_response->information = "success";
+            response_lock.release();
+
             // notify 
             response_condVar.notify_one();
         }
     }
 
-    void ListenThread(string sql, SqlResponse* response)
+    void ListenThread()
     {
-        // 
+        // check msg queue is ready
+        if (worker_msg_key < 0)
+        {
+            throw std::runtime_error("msg queue not start successfully");
+        }
+        
+        WorkMsg work_msg;
+        work_msg.msg_type = user_session->msg_queue_id;
+
+        // read one sql msg from queue
+        // first msg data struct: | send back queue id |
+        msgrcv(worker_msg_key, &work_msg, MSG_DATA_LENGTH, CONNECTOR_MSG_TYPE_RECV, 0);
+            
+        // store the send back msg
+        long send_back_id;
+        memcpy(&send_back_id, work_msg.msg_data, sizeof(long));
 
         while(working)
         {   
-            // lock to write sql information
+            // receive msg id
+            work_msg.msg_type = user_session->msg_queue_id;
+
+            // get sql length
+            int sql_length;
+            memcpy(&sql_length, work_msg.msg_data, sizeof(sql_length));
+
+            assert(sql_length < SQL_MAX_LENGTH);
+
+            // lock to write sql
             std::unique_lock<std::mutex> lock(param_mutex);
-            executing_sql = sql;
-            executing_sql_response = response;
+            memcpy(&executing_sql, work_msg.msg_data + sizeof(sql_length), sql_length);
+
+            // release lock on hands
+            lock.release();
+
             // notify work thread
             param_condVar.notify_one();
 
             // wait until result is ok
             std::unique_lock<std::mutex> response_lock(response_mutex);
             response_condVar.wait(lock);
+
+            // write response to queue
+            executing_sql_response->Serialize(work_msg.msg_data);
+            work_msg.msg_type = send_back_id;
+            msgsnd(connector_msg_key, &work_msg, strlen(work_msg.msg_data) + 1, 0);
         }
     }
 
@@ -192,9 +241,6 @@ public:
     }
 
 };
-
-key_t connector_message_key = CONNECTOR_MESSAGE_KEY;
-int connector_msgid = msgget(connector_message_key, IPC_CREAT | 0755);
 
 
 class Connector
@@ -217,7 +263,7 @@ private:
     std::condition_variable result_ready_condition;
 
     // used to cache connection information and result
-    string connect_ip; int connect_port; UserIdentity connect_identity; string connect_db_name; 
+    long msg_queue_id; string connect_ip; int connect_port; UserIdentity connect_identity; string connect_db_name; 
     Session* connect_result;
 
     // store the worker thread, make sure they will end before this object destruct
@@ -272,6 +318,7 @@ public:
 
         // create new session
         new_session = new Session();
+        new_session->msg_queue_id = msg_queue_id;
         new_session->client_ip = ip;
         new_session->client_port = port;
         new_session->connect_db_name = db_name;
@@ -322,7 +369,7 @@ public:
     void RunForwardThread()
     {
         // check msg queue is ready
-        if (connector_msgid < 0)
+        if (connector_msg_key < 0)
         {
             throw std::runtime_error("msg queue not start successfully");
         }
@@ -331,17 +378,24 @@ public:
         msg.msg_type = CONNECTOR_MESSAGE_ID;
         while(working){
             // get one call msg from public queue, contains one unique queue id used to communicate.
-            msgrcv(connector_msgid, &msg, MSG_DATA_LENGTH, CONNECTOR_MSG_TYPE_RECV, 0);
+            // first msg data struct: | receive queue id | send back queue id |
+            msgrcv(connector_msg_key, &msg, MSG_DATA_LENGTH, CONNECTOR_MSG_TYPE_RECV, 0);
+
+            // get receive queue id and send back queue id
             memcpy(&msg.msg_type, msg.msg_data, sizeof(long));
+            long send_back_id;
+            memcpy(&send_back_id, msg.msg_data, sizeof(long));
             
             // get one detail message from special message queue(client send information msg to connect server)
-            msgrcv(connector_msgid, &msg, MSG_DATA_LENGTH, CONNECTOR_MSG_TYPE_RECV, 0);
+            msgrcv(connector_msg_key, &msg, MSG_DATA_LENGTH, CONNECTOR_MSG_TYPE_RECV, 0);
             cout << "receive from client" << msg.msg_data << std::endl;
 
             // get lock to write connect information
             std::unique_lock<std::mutex> lock(worker_mutex);
 
             // get connection information from input stream
+            msg_queue_id = msg.msg_type;   // cache the special queue id, and it will be used lately between client and the sql worker of the client
+            
             default_address_type offset = 0;
 
             memcpy(&connect_ip, msg.msg_data + offset, IP_LENGTH);
@@ -362,16 +416,17 @@ public:
 
             memcpy(&connect_db_name, msg.msg_data + offset, db_name_length);
             
+            // release lock on hands
+            lock.release();
+
             // wake up connector thread
             Session* result = CreateConnection();
 
             // send connect result to sepcial queue
             result->Serialize(msg.msg_data);
-            msg.msg_type = CONNECTOR_MSG_TYPE_SEND;
-            msgsnd(connector_msgid, &msg, strlen(msg.msg_data) + 1, 0);
+            msg.msg_type = send_back_id;
+            msgsnd(connector_msg_key, &msg, strlen(msg.msg_data) + 1, 0);
 
-            // release lock on hands
-            lock.release();
         }   
     }
 
