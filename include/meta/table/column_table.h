@@ -73,6 +73,15 @@ public:
         columns = std::move(t.columns);
     }
 
+    ColumnTable& operator=(const ColumnTable& other) {
+        if (this != &other) {
+            table_name = other.table_name;
+            table_type = other.table_type;
+            column_size = other.column_size;
+            columns = other.columns;
+        }
+        return *this;
+    }
 
     /**
      * Inserts a new column into the table.
