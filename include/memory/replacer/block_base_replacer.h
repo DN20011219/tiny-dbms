@@ -74,7 +74,7 @@ public:
     
     bool LoadTableData()
     {
-
+        return true;
     }
 
     // release one block
