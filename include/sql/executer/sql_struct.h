@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "../../bench/session.h"
 #include "../../config.h"
 
 using std::string;
@@ -21,6 +22,12 @@ enum SqlState
     PARSE_ERROR,
     EXECUTING,
     SUCCESS
+};
+
+struct SqlCommit
+{
+    string sql;
+    Session* session;
 };
 
 struct SqlResponse
