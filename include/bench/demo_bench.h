@@ -20,7 +20,7 @@
 #include "../sql/parser/separater.h"
 #include "../sql/parser/parser.h"
 #include "db_management.h"
-#include "connector.h"
+#include "server.h"
 
 using std::string;
 using std::cin;
@@ -148,7 +148,6 @@ namespace tiny_v_dbms {
     void StartBench() 
     {
         Server server;
-
         server.Run();
 
         // ExecuteSQL();

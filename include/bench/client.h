@@ -10,10 +10,11 @@
 #include <string>
 #include <iostream>
 #include <thread>
+#include <unistd.h>
 
 #include "../config.h"
 #include "./queue_msg.h"
-#include <unistd.h>
+#include "../sql/executer/sql_struct.h"
 
 using std::cin;
 
