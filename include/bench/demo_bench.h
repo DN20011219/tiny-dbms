@@ -20,6 +20,7 @@
 #include "../sql/parser/separater.h"
 #include "../sql/parser/parser.h"
 #include "db_management.h"
+#include "connector.h"
 
 using std::string;
 using std::cin;
@@ -146,28 +147,33 @@ namespace tiny_v_dbms {
 
     void StartBench() 
     {
-        
-        char ctr;
-        while(true) {
-            cin >> ctr;
-            switch (ctr)
-            {
-            case 'Q': // quit
-                return;
-            case 'I': // install
-                InstallDBMS();
-                break;
-            case 'C': // create
-                CreateDB();
-                break;
-            case 'S': // add
-                ExecuteSQL();
-                break;
-            default:
-                cout << "default" << std::endl;
-                break;
-            }
-        }
+        Server server;
+
+        server.Run();
+
+        // ExecuteSQL();
+
+        // char ctr;
+        // while(true) {
+        //     cin >> ctr;
+        //     switch (ctr)
+        //     {
+        //     case 'Q': // quit
+        //         return;
+        //     case 'I': // install
+        //         InstallDBMS();
+        //         break;
+        //     case 'C': // create
+        //         CreateDB();
+        //         break;
+        //     case 'S': // add
+        //         ExecuteSQL();
+        //         break;
+        //     default:
+        //         cout << "default" << std::endl;
+        //         break;
+        //     }
+        // }
     }
 
     

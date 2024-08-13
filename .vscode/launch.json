@@ -10,7 +10,16 @@
         "preLaunchTask": "make app",  // 执行调试的前置任务名
         "MIMode": "lldb",               // 必填（与哪个 debugger 通信）
         "externalConsole": true,
-        
+      },
+      {
+        "name": "client",          // debug 文件名
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/src/test/bench/client",  // 构建后的可执行文件
+        "cwd": "${workspaceFolder}",
+        "preLaunchTask": "make client",  // 执行调试的前置任务名
+        "MIMode": "lldb",               // 必填（与哪个 debugger 通信）
+        "externalConsole": true,
       }
     ]
   }
