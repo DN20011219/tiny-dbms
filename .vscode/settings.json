@@ -65,6 +65,12 @@
         "vector": "cpp",
         "algorithm": "cpp",
         "iterator": "cpp",
-        "memory_resource": "cpp"
-    }
+        "memory_resource": "cpp",
+        "regex": "cpp",
+        "memory": "cpp",
+        "__memory": "cpp",
+        "utility": "cpp"
+    },
+    "workbench.settings.useSplitJSON": false,
+    "json.schemas": []
 }

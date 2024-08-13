@@ -7,8 +7,15 @@
         "command": "make",       // 命令行调用
         "options": {
           "cwd": "${workspaceFolder}/build"  // 在 build/ 目录中执行
-        },
-        "dependsOn": "let's cmake"           // 依赖哪个任务的执行结果
+        }
+      },
+      {
+        "type": "shell",
+        "label": "make client",   // 任务名
+        "command": "clang++ -std=c++17 client.cpp -o client",       // 命令行调用
+        "options": {
+          "cwd": "${workspaceFolder}/src/test/bench/"  // 在 build/ 目录中执行
+        }
       }
     ]
   }

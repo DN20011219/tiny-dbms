@@ -7,6 +7,9 @@
 #ifndef VDBMS_CONFIG_H_
 #define VDBMS_CONFIG_H_
 
+#include <sys/ipc.h>
+#include <sys/msg.h>
+
 #include "meta/vector.h"
 
 namespace tiny_v_dbms {
@@ -69,8 +72,9 @@ namespace tiny_v_dbms {
     enum column_index_type {NONE, FLAT};
 
     // config about client and server
+
     #define CONNECTOR_MESSAGE_KEY ftok("tvdbms_connect", 7) 
-    #define WORKER_MESSAGE_KEY ftok("tvdbms_work", 7) 
+    #define WORKER_MESSAGE_KEY ftok("tvdbms_work", 8) 
     #define CONNECTOR_MESSAGE_ID 40286          // this id is used to confirm the msg queue set id used by connecter and clients
     #define WORKER_MESSAGE_ID 40287             // this id is used to confirm the msg queue set id used by workers and clients
     #define CONNECTOR_MSG_TYPE_SEND    100      // this type is used when server send msg to client
@@ -89,7 +93,15 @@ namespace tiny_v_dbms {
     #define SQL_MAX_LENGTH 1996             
     #define SQL_LENGTH_LENGTH 4
 
+    #ifndef CONNECTOR_MSG_KEY
+    #define CONNECTOR_MSG_KEY
+    const int connector_msg_key = msgget(ftok("/tmp/tvdbms_connect", 7), IPC_CREAT | 0755);
+    #endif // CONNECTOR_MSG_KEY
 
+    #ifndef WORKER_MSG_KEY
+    #define WORKER_MSG_KEY
+    const int worker_msg_key = msgget(ftok("/tmp/tvdbms_work", 8), IPC_CREAT | 0755);
+    #endif // WORKER_MSG_KEY
 }
 
 #endif // VDBMS_CONFIG_H_
