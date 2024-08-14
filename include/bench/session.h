@@ -13,6 +13,8 @@
 
 #include <string>
 
+#include "../meta/db/db.h"
+
 using std::string;
 
 namespace tiny_v_dbms {
@@ -27,6 +29,10 @@ enum UserIdentity
 struct Session
 {
 
+    // belows fields are used to cache the msg about db and tables, to avoid frequently io.
+    DB* cached_db;
+
+    // belows fields are used to connect
     long msg_queue_id;  // this id will store the queue used to communicate
 
     UserIdentity connector_identity;
@@ -99,6 +105,11 @@ struct Session
 
         // Deserialize connect_state
         memcpy(&connect_state, buffer + offset, sizeof(bool));
+    }
+
+    void Close()
+    {
+        delete cached_db;
     }
 };
 

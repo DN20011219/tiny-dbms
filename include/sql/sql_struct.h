@@ -9,8 +9,8 @@
 
 #include <string>
 
-#include "../../bench/session.h"
-#include "../../config.h"
+#include "../bench/session.h"
+#include "../config.h"
 
 using std::string;
 
