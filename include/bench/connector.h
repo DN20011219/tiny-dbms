@@ -75,7 +75,7 @@ public:
         
         Session* new_session;
 
-        // check exist
+        // check session exist
         if (GetSession(ip, port, new_session))
         {
             // if areadly exist and identity is same as input, return connect true, and set old connnect information as back
@@ -91,6 +91,29 @@ public:
             // throw std::runtime_error("connection has been created on :" + ip + " : " + std::to_string(port));
         }
 
+        // open db, and cache db_information
+
+        if (identity == UserIdentity::ROOT && db_name == DEFAULT_DB_FOLDER_NAME)
+        {
+            // root user open base_db
+            return new_session;
+        }
+        if (identity == UserIdentity::USER && db_name == DEFAULT_DB_FOLDER_NAME)
+        {
+            // user open base_db, reject
+            new_session = new Session();
+            new_session->connect_state = false;
+            return new_session;
+        }
+
+        // user or root open user db
+
+
+        return new_session;
+    } 
+
+    void CreateNewSession(Session* new_session, string ip, int port, UserIdentity identity, string db_name)
+    {
         // create new session
         new_session = new Session();
         new_session->msg_queue_id = msg_queue_id;
@@ -108,9 +131,7 @@ public:
 
         // create new worker, start the worker thread.
         worker_map[new_session] = new Worker(new_session);
-
-        return new_session;
-    } 
+    }
 
     bool GetSession(string ip, int port, Session*& session){
         if (session_map.find(ip + std::to_string(port)) != session_map.end())

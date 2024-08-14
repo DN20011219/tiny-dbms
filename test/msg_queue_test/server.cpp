@@ -31,7 +31,7 @@ int main(void){
             break;
         }   
         msg.msg_type = SEND;
-        msgsnd(msgid, &msg, 80, 0);
+        msgsnd(msgid, &msg, strlen(msg.msg_data) + 1, 0);
 
         msg.msg_type = RECV;
         msgrcv(msgid, &msg, 80, RECV, 0);

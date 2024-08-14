@@ -100,6 +100,16 @@ public:
         }
     }
 
+    // user replacer to get a free data block
+    void GetFreeDataBlock(char*& data)
+    {       
+        // std::cout << "try get one block on mem" << std::endl;
+        if (!data_replacer->GetFreeBlock(data))
+        {   
+            throw std::runtime_error("No enough space");
+        }
+    }
+
     void ReleaseBlock(char* data)
     {
         if (!data_replacer->ReleaseBlock(data))

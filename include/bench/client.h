@@ -14,7 +14,7 @@
 
 #include "../config.h"
 #include "./queue_msg.h"
-#include "../sql/executer/sql_struct.h"
+#include "../sql/sql_struct.h"
 
 using std::cin;
 

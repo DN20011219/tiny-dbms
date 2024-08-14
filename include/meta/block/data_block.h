@@ -59,7 +59,7 @@ public:
 
         // open one memory block, and make data* controlled by mm
         MemoryManagement* mm = MemoryManagement::GetInstance();
-        mm->GetFreeTableBlock(data);
+        mm->GetFreeDataBlock(data);
     }
 
     ~DataBlock()

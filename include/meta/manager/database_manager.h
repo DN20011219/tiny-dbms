@@ -91,7 +91,7 @@ public:
 
         // read the first block of deafult table
         TableBlock table_block;
-        bfmm->ReadOneTableBlock(db.db_all_tables_path, 0, table_block);
+        bfmm->ReadOneTableBlock(db.default_table_header_file_path, 0, table_block);
 
         default_amount_type tables_num = table_block.table_amount;
         while(tables_num > 0)
@@ -105,7 +105,7 @@ public:
         // read next blocks if exist
         if (table_block.next_block_pointer != 0x0)
         {
-            LoadTables(db, db.db_all_tables_path, table_block.next_block_pointer);
+            LoadTables(db, db.default_table_header_file_path, table_block.next_block_pointer);
         }
         
         return true;
@@ -164,7 +164,7 @@ public:
 
         // read the first block of deafult table
         TableBlock table_block;
-        bfmm->ReadOneTableBlock(db.db_all_tables_path, 0, table_block);
+        bfmm->ReadOneTableBlock(db.default_table_header_file_path, 0, table_block);
 
         default_amount_type tables_num = table_block.table_amount;
         while(tables_num > 0)

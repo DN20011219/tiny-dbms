@@ -37,7 +37,7 @@ int main(void){
         }
 
         msg.msg_type = SEND;
-        msgsnd(msgid, &msg, 80, 0);
+        msgsnd(msgid, &msg, strlen(msg.msg_data) + 1, 0);
 
     }
 

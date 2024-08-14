@@ -10,27 +10,29 @@
 
 #include <iostream>
 
-#include "../config.h"
-#include "../meta/db/db.h"
-#include "../storage/file_management.h"
-#include "../memory/memory_management.h"
+#include "../../config.h"
+#include "../../meta/db/db.h"
+#include "../../storage/file_management.h"
+#include "../../memory/memory_management.h"
 // table header & table data
-#include "../meta/table/column_table.h"
-#include "../meta/block/table_block.h"
-#include "../meta/block/data_block.h"
-#include "../storage/block_file_management.h"
+#include "../../meta/table/column_table.h"
+#include "../../meta/block/table_block.h"
+#include "../../meta/block/data_block.h"
+#include "../../storage/block_file_management.h"
 // log
-#include "../memory/log_central_management.h"
-#include "../meta/log.h"
+#include "../../memory/log_central_management.h"
+#include "../../meta/log.h"
+// util
+#include "../../utils/cal_file_url_util.h"
+
 
 namespace tiny_v_dbms {
 
 
-class DBManagement {
+class Operator {
 private:
     FileManagement* file_mm;
     BlockFileManagement* bfmm;
-
 
     // get install path from file
     string GetInstallPath() 
@@ -153,8 +155,62 @@ private:
         bfmm->WriteBackBlock(file_stream, offset, block.data);
         file_stream.close();
     }
+    
+    // get install path from file
+    void GetInstallPath(string& install_path) 
+    {
+        FileManagement file_mm;
+        string cache_file_uri = INSTALL_PATH_CACHE_FILE;
+        std::ifstream file_read = file_mm.ReadOrCreateFile(cache_file_uri);
+        if (!file_read) {
+            throw std::runtime_error("Failed to open install file for reading");
+        }
+        getline(file_read, install_path);
+        file_read.close();
+
+    }
+
+    void WriteInstallPath(string& install_path) 
+    {
+        string cache_file_uri = INSTALL_PATH_CACHE_FILE;
+        std::ofstream file_write;
+        file_write.open(cache_file_uri);
+        file_write.write(install_path.c_str(), install_path.length());
+        file_write.close();
+    }
+
+    void InstallDBMS() 
+    {
+        // get install path from file
+        string install_path;
+        GetInstallPath(install_path);
+
+        // empty means not installed
+        if (install_path.length() != 0) {
+            cout << "tiny-vector-dbms areadly installed in " << install_path << std::endl;
+        }
+        // try install tiny-vector-dbms
+        else {
+            cout << "input the install path (must be a folder): ";
+            std::cin >> install_path;
+            cout << "try install tiny-vector-dbms in " << install_path << std::endl;
+
+            // write install path to storage file
+            WriteInstallPath(install_path); 
+
+            // install the default db
+            CreateSystemDB();
+
+            cout << "install successfully in: " << install_path << std::endl;
+        }
+    }
 
 public:
+
+    void Install()
+    {
+        InstallDBMS();
+    }
 
     /*
         CREATE DATABASE base_db;
@@ -184,7 +240,7 @@ public:
 
         DB default_db;
         default_db.db_name = db_name;
-        default_db.db_all_tables_path = GetAndCreateDefaultTableFile(GetDefaultTablePath(db_path_uri));
+        default_db.default_table_header_file_path = GetAndCreateDefaultTableFile(GetDefaultTablePath(db_path_uri));
         SerializeDBFile(default_db, db_file_uri);
 
         // 2、insert one row in base_db.default_table, means add one db
@@ -209,7 +265,7 @@ public:
         DB default_db;
         default_db.db_name = DEFAULT_DB_FILE_NAME;
         default_db.db_description = "The base db of this dbms, has a table, which stores all db about this dbms";
-        default_db.db_all_tables_path = GetAndCreateDefaultTableFile(GetDefaultTablePath(db_path_uri));
+        default_db.default_table_header_file_path = GetAndCreateDefaultTableFile(GetDefaultTablePath(db_path_uri));
         SerializeDBFile(default_db, db_file_uri);
     }
 
@@ -329,21 +385,6 @@ public:
         // default_address_type free_address = bfmm->GetNewBlockAddress(file_stream);    // get free block address in file
         bfmm->WriteBackBlock(file_stream, 0, block.data);
         file_stream.close();
-        // cout << "table amount in block is: " << (default_amount_type)block.data[0] << endl;
-
-        // Test deserialize from file: read from file and deserialize, this default block is at 0 offset
-        // TableBlock new_block;
-        // bfmm->ReadFromFile(file_stream, 0, new_block.data);
-        // new_block.DeserializeFromBuffer(new_block.data);
-        // assert(new_block.table_amount == 1);
-        // assert(new_block.tables_begin_address[new_block.table_amount - 1] == 4008);
-
-        // ColumnTable new_ct;
-        // new_ct.Deserialize(new_block.data, new_block.tables_begin_address[new_block.table_amount - 1]);
-        // assert(new_ct.column_size == 1);
-        // assert(new_ct.columns.column_name_array[new_ct.column_size - 1] == DEFAULT_TABLE_COLUMN_NAME_ONE);
-        // assert(new_ct.columns.column_storage_address_array[new_ct.column_size - 1] == 0);
-
         
         // 3、INSERT INTO default_table(db_names) VALUES (data) FROM base_db
         string db_name = DEFAULT_DB_FOLDER_NAME;
@@ -351,16 +392,6 @@ public:
         strcpy(deafult_db_name, db_name.c_str());
         InsertIntoTable(DEFAULT_DB_FOLDER_NAME, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, deafult_db_name);
         delete[] deafult_db_name;
-
-        // // Test: USE  DEFAULT_TABLE_NAME  SELECT  DEFAULT_TABLE_COLUMN_NAME_ONE  FROM  DEFAULT_TABLE_NAME
-        // DataBlock data_block;
-        // SelectFromTable(DEFAULT_DB_FOLDER_NAME, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, data_block);
-        // data_block.DeserializeFromBuffer(data_block.data);
-        // assert(data_block.field_data_nums == 1);
-        // assert(data_block.data[4046] == 'b');
-        // assert(data_block.data[4047] == 'a');
-        // assert(data_block.data[4048] == 's');
-        // assert(data_block.data[4049] == 'e');
 
     }
 
@@ -371,6 +402,162 @@ public:
         {
             throw std::runtime_error("db_name 's default_table not exist");
         }
+    }
+
+    bool OpenDB(DB& db)
+    {
+        if (db.db_name == DEFAULT_DB_FILE_NAME)
+        {
+            OpenDefaultDB(db);
+            return true;
+        }
+
+        
+        if (CheckDbExist(db.db_name))   // load base db's default table's data, scan and check whether the input db exist.
+        {
+
+        }
+
+        return false;
+    }
+
+    // default db has only  default tables, there is no need to read default tables data
+    void OpenDefaultDB(DB& db)
+    {
+        LoadDefaultTables(db);
+    }
+    
+    // all table's header are stored on default_table.tvdbb file, the data of default table now has no use.
+    void OpenUserDB(DB& db)
+    {
+        LoadDefaultTables(db);
+
+        // // open default table, read data, load user tables
+        // DataBlock block;
+        // string data_file_url;
+        // bool has_next_block = LoadFirstDataBlock(db, DEFAULT_TABLE_DATA_FILE_NAME, DEFAULT_TABLE_COLUMN_NAME_TWO, block, data_file_url);
+
+        // // parse the first block
+        // default_length_size records_num = block.field_data_nums;
+        // char* table_name = new char[block.field_length];
+        // while(records_num > 0)
+        // {
+        //     // get table name
+        //     memcpy(table_name, block.data + (BLOCK_SIZE - records_num * block.field_length), block.field_length);
+        //     string table_name_str(table_name);
+
+        //     // load table header
+        //     ColumnTable new_table;
+        //     records_num--;
+        // }
+        // delete[] table_name;
+
+        // // parse other block, if exists
+        // while(has_next_block && LoadDataBlocks(data_file_url, block))
+        // {   
+
+        // }
+    }
+
+    // read table headers stored in default_table.tvdbb
+    void LoadDefaultTables(DB& db)
+    {
+        // open db file, like "db.tvbb", and deserialize to get default table name
+        string db_file_name = GetAndCreateDbFolder(db.db_name) + "/"+ db.db_name + DB_FILE_SUFFIX;
+
+        DeserializeDBFile(db, db_file_name);
+
+        // open default table file, like "default_table.tvdbb"
+        TableBlock block;
+
+        // read db headers file to block, offset is 0, because the first block must at 0 offset
+        ReadOneTableBlock(db.default_table_header_file_path, 0, block);
+
+        // deserialize the tables in tables block and cache
+        for (default_amount_type i = 0; i < block.table_amount; i++)
+        {
+            ColumnTable table;
+            table.Deserialize(block.data, block.tables_begin_address[i]);
+            db.tables.push_back(table);
+        }
+
+        // serialize next block, if exists
+        while (block.next_block_pointer != 0x0)
+        {
+            // read next block
+            ReadOneTableBlock(db.default_table_header_file_path, block.next_block_pointer, block);   
+            block.DeserializeFromBuffer(block.data);
+
+            // deserialize the tables in tables block and cache
+            for (default_amount_type i = 0; i < block.table_amount; i++)
+            {
+                ColumnTable table;
+                table.Deserialize(block.data, block.tables_begin_address[i]);
+                db.tables.push_back(table);
+            }
+        }
+    }
+    
+    // return: have next block
+    bool LoadFirstDataBlock(DB db, string table_name, string col_name, DataBlock& block, string& data_file_url)
+    {
+        ColumnTable* table = nullptr;
+
+        // check table exist in db
+        for (auto& item: db.tables)
+        {
+            if (item.table_name == table_name)
+            {
+                table = &item;
+            }
+        }
+
+        // if not found table
+        if (table == nullptr)
+            throw std::runtime_error("DB has no table named " + table_name);
+
+        // get column information
+        default_length_size column_offset = 0;
+        while (column_offset < table->column_size)
+        {
+            if (table->columns.column_name_array[column_offset] == col_name)
+            {
+                break;
+            }
+            column_offset++;
+        }
+
+        // if not found column
+        if (column_offset >= table->column_size)
+        {
+            throw std::runtime_error("table has no column " + col_name);
+        }
+
+        // read the first data block of the column
+        data_file_url = CalFileUrlUtil::GetTableDataFile(db.db_name, table_name);
+        ReadOneDataBlock(data_file_url, table->columns.column_storage_address_array[column_offset], block);
+
+        // return has next block
+        return block.next_block_pointer == 0x0;
+    }
+
+    // return: have next block
+    bool LoadDataBlocks(string data_file_url, DataBlock& block)
+    {
+        // cache next block address
+        default_address_type next_block_address = block.next_block_pointer;
+
+        if (next_block_address == 0x0)
+        {
+            throw std::runtime_error("Can not load next block, because its null");
+        }
+
+        // read the next block
+        ReadOneDataBlock(data_file_url, next_block_address, block);
+
+        // return has next block
+        return block.next_block_pointer == 0x0;
+
     }
 
     // mainly used when insert data to default table of base db, because the default table of base db will store all db names but not 
@@ -507,7 +694,7 @@ public:
         TableBlock block;
 
         // read db headers file to block, offset is 0, because the first block must at 0 offset
-        ReadOneTableBlock(db_file.db_all_tables_path, 0, block);
+        ReadOneTableBlock(db_file.default_table_header_file_path, 0, block);
         block.DeserializeFromBuffer(block.data);
         // deserialize the tables in tables block and check
         for (default_amount_type i = 0; i < block.table_amount; i++)
@@ -524,7 +711,7 @@ public:
         while (block.next_block_pointer != 0)
         {
             // read next block
-            ReadOneTableBlock(db_file.db_all_tables_path, block.next_block_pointer, block);   
+            ReadOneTableBlock(db_file.default_table_header_file_path, block.next_block_pointer, block);   
             block.DeserializeFromBuffer(block.data);
             // deserialize the tables in tables block and check
             for (default_amount_type i = 0; i < block.table_amount; i++)
@@ -586,7 +773,7 @@ public:
     }
 
 public:
-    DBManagement()
+    Operator()
     {
         file_mm = new FileManagement();
         bfmm = new BlockFileManagement();
@@ -644,7 +831,7 @@ public:
         file_mm->WriteFileAppend(file_path, &endl, 1);
         file_mm->WriteFileAppend(file_path, db.db_description.c_str(), db.db_description.length());
         file_mm->WriteFileAppend(file_path, &endl, 1);
-        file_mm->WriteFileAppend(file_path, db.db_all_tables_path.c_str(), db.db_all_tables_path.length());
+        file_mm->WriteFileAppend(file_path, db.default_table_header_file_path.c_str(), db.default_table_header_file_path.length());
         file_mm->WriteFileAppend(file_path, &endl, 1);
     }
     
@@ -654,7 +841,7 @@ public:
         std::ifstream file_read = file_mm->ReadOrCreateFile(file_path);
         getline(file_read, db.db_name);
         getline(file_read, db.db_description);
-        getline(file_read, db.db_all_tables_path);
+        getline(file_read, db.default_table_header_file_path);
         file_read.close();
     } 
 

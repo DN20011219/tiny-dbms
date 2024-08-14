@@ -30,9 +30,8 @@ private:
 
     SqlExecutePlanType plan_type;
     
-
 public:
-
+    
 
 };
 

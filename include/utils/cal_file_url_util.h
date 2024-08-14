@@ -87,6 +87,14 @@ public:
         return GetDefaultTablePath(db_name) + "/" + DEFAULT_TABLE_NAME + TABLE_FILE_SUFFIX;
     }
 
+    static string GetTableHeaderFile(string db_name, string table_name)
+    {
+        return GetDefaultTablePath(db_name) + "/" + table_name + TABLE_FILE_SUFFIX;
+    }
+    static string GetTableDataFile(string db_name, string table_name)
+    {
+        return GetDefaultTablePath(db_name) + "/" + DEFAULT_TABLE_DATA_FOLDER + "/" + table_name + TABLE_DATA_FILE_SUFFIX;
+    }
 };
 
 }
