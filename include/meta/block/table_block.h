@@ -50,7 +50,9 @@ public:
     // not serialize field
     char* data;                                 // data pointer in memory, used to visit memory
 
-    TableBlock()
+    TableBlock() = default;
+
+    TableBlock(string table_sign, default_address_type block_offset)
     {
         table_amount = 0;
         CalAndUpdateFreeSpace();
@@ -60,13 +62,13 @@ public:
         tables_begin_address = nullptr;
 
         // open one memory block, and make data* controlled by mm
-        MemoryManagement* mm = MemoryManagement::GetInstance();
-        mm->GetFreeTableBlock(data);
+        BufferPool* mm = BufferPool::GetInstance();
+        mm->GetFreeTableBlock(data, table_sign, block_offset);
     }
 
     ~TableBlock()
     {
-        MemoryManagement* mm = MemoryManagement::GetInstance();
+        BufferPool* mm = BufferPool::GetInstance();
         mm->ReleaseBlock(data);
 
         delete[] tables_begin_address;

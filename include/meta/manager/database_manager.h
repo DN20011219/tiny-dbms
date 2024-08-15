@@ -53,7 +53,7 @@ class DatabaseManager
 
 private:
     map<string, DatabaseControllSlot> opened_db;
-    map<string, shared_mutex*> opened_db_mutex;
+    // map<string, shared_mutex*> opened_db_mutex;
 
     // vector<lock_guard<shared_mutex>*> locks;
 
@@ -150,7 +150,7 @@ public:
         if (opened_db.find(db_name) != opened_db.end())
         {
             // lock the mutex at read mode
-            lock_guard<shared_mutex>(*opened_db_mutex[db_name]);
+            // lock_guard<shared_mutex>(*opened_db_mutex[db_name]);
             
             db = opened_db[db_name].db;
             return true;
@@ -186,7 +186,7 @@ public:
         
         // add to map
         opened_db[db_name] = DatabaseControllSlot(new_db);
-        opened_db_mutex[db_name] = new shared_mutex();
+        // opened_db_mutex[db_name] = new shared_mutex();
         return true;
     }
 
