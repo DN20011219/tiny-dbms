@@ -20,13 +20,6 @@ class CalFileUrlUtil
 private:
     static std::string install_path;
 
-public:
-
-    CalFileUrlUtil()
-    {
-        GetInstallPathFromDisk();
-    }
-
     // get install path from file and store in cache
     void GetInstallPathFromDisk() 
     {
@@ -40,6 +33,13 @@ public:
         {
             throw std::runtime_error("dbms has not been installed!");
         }
+    }
+
+public:
+
+    CalFileUrlUtil()
+    {
+        GetInstallPathFromDisk();
     }
 
     // get install path from cache

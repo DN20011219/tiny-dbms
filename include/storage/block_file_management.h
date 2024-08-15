@@ -250,6 +250,13 @@ public:
         WriteBackBlock(file_stream, offset, block.data);
         file_stream.close();
     }
+    void WriteBackDataBlock(string data_file_uri, default_address_type offset, char* data)
+    {
+        fstream file_stream;
+        OpenDataFile(data_file_uri, file_stream);    // open data file, like "test.data"   
+        WriteBackBlock(file_stream, offset, data);
+        file_stream.close();
+    }
 private:
 
 };

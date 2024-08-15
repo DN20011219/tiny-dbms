@@ -5,20 +5,20 @@
 
 namespace tiny_v_dbms {
         
-    MemoryManagement *MemoryManagement::m_SingleInstance = NULL;
-    std::mutex MemoryManagement::m_Mutex;
+    BufferPool *BufferPool::m_SingleInstance = NULL;
+    std::mutex BufferPool::m_Mutex;
 
     /**
-     * @brief Constructor for MemoryManagement class
+     * @brief Constructor for BufferPool class
      * 
      * Initializes the memory management system with default settings.
      * 
      * @example
-     * MemoryManagement mm; // Create an instance of MemoryManagement
+     * BufferPool mm; // Create an instance of BufferPool
     */
-    MemoryManagement::MemoryManagement()
+    BufferPool::BufferPool()
     {   
-        std::cout << "SingleInstance MemoryManagement begin create" << std::endl;
+        std::cout << "SingleInstance BufferPool begin create" << std::endl;
 
         default_length_size block_size = BLOCK_SIZE;
 
@@ -43,30 +43,30 @@ namespace tiny_v_dbms {
 
         // so can use different replace strategy in different type memory
         // BlockReplacer replacer_one(data_memory_blocks, max_data_block_amount, free_data_blocks, using_data_blocks);
-        data_replacer = new BlockBasicReplacer(data_memory_blocks, max_data_block_amount, free_data_blocks, using_data_blocks);
+        // data_replacer = new BlockBasicReplacer(data_memory_blocks, max_data_block_amount, free_data_blocks, using_data_blocks);
 
         // BlockReplacer replacer_two(table_memory_blocks, max_table_block_amount, free_table_blocks, using_table_blocks);
-        table_replacer = new BlockBasicReplacer(table_memory_blocks, max_table_block_amount, free_table_blocks, using_table_blocks);
+        // table_replacer = new BlockBasicReplacer(table_memory_blocks, max_table_block_amount, free_table_blocks, using_table_blocks);
 
-        std::cout << "SingleInstance MemoryManagement end create" << std::endl;
+        std::cout << "SingleInstance BufferPool end create" << std::endl;
     }
 
 
-    MemoryManagement *&MemoryManagement::GetInstance()
+    BufferPool *&BufferPool::GetInstance()
     {
         if (m_SingleInstance == NULL) 
         {
             std::unique_lock<std::mutex> lock(m_Mutex); // 加锁
             if (m_SingleInstance == NULL)
             {
-                m_SingleInstance = new (std::nothrow) MemoryManagement;
+                m_SingleInstance = new (std::nothrow) BufferPool;
             }
         }
 
         return m_SingleInstance;
     }
 
-    void MemoryManagement::deleteInstance()
+    void BufferPool::deleteInstance()
     {
         std::unique_lock<std::mutex> lock(m_Mutex);
         if (m_SingleInstance)
