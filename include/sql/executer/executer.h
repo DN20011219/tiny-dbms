@@ -12,6 +12,7 @@ namespace tiny_v_dbms {
 enum ExecutionState
 {
     PREPARE,
+    PLANNING,
     EXECUTING,
     WAITING,
     FINISH,

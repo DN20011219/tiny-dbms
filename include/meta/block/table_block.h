@@ -62,14 +62,14 @@ public:
         tables_begin_address = nullptr;
 
         // open one memory block, and make data* controlled by mm
-        BufferPool* mm = BufferPool::GetInstance();
-        mm->GetFreeTableBlock(data, table_sign, block_offset);
+        // BufferPool* mm = BufferPool::GetInstance();
+        // mm->GetFreeTableBlock(data, table_sign, block_offset);
     }
 
     ~TableBlock()
     {
-        BufferPool* mm = BufferPool::GetInstance();
-        mm->ReleaseBlock(data);
+        // BufferPool* mm = BufferPool::GetInstance();
+        // mm->ReleaseBlock(data);
 
         delete[] tables_begin_address;
     }
@@ -88,13 +88,14 @@ public:
     // return false when there has no space to contain the table in this block
     bool CalBeginAddress(ColumnTable* table, default_address_type& address)
     {
+        size_t table_length = table->Serialize().second;
         if (table_amount == 0)
         {
-            address = BLOCK_SIZE - table->Serialize().second;
+            address = BLOCK_SIZE - table_length;
             return true;
         }
 
-        address = tables_begin_address[table_amount - 1] - table->Serialize().second;
+        address = tables_begin_address[table_amount - 1] - table_length;
         if (address >= sizeof(default_amount_type) + sizeof(default_length_size) + sizeof(default_address_type) + table_amount * sizeof(default_address_type))
         {
             return true;

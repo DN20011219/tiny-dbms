@@ -51,6 +51,7 @@ namespace tiny_v_dbms {
 
     // config about storage
     #define MEMORY_SIZE 10737418239 / 4            // the size of the memory, any memory using need to acquire space here, 10737418239 byte (1g) / 4 = 256 mb
+    #define SLOT_AMOUNT 10737418239 / 4 / 4096      // the amount of slots on buffer pool
     #define BLOCK_SIZE 4096                    // the size of one block is 4096 byte (4kb)
     #define LOG_MANAGER_INSRANCE_AMOUNT 4096    // the log manager amount, it should as same as block amout in memory_management
 

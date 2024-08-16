@@ -31,23 +31,6 @@ struct SlotSign
     }
 };
 
-class SlotTool
-{
-public:
-    static SlotSign GetSign(std::string db_name, std::string table_name, default_address_type offset);
-};
-
-SlotSign SlotTool::GetSign(std::string db_name, std::string table_name, default_address_type offset)
-{
-    SlotSign slot;
-    slot.db_name = db_name;
-    slot.table_name = table_name;
-    slot.block_offset = offset;
-    return slot;
-}
-
-
-
 struct BlockSlot
 {
     // SlotSign block_sign; // db_name&&table_name&&block_offset
@@ -64,10 +47,22 @@ struct BlockSlot
     // std::mutex update_struct_mutex; // used for thread waiting or awaken
     // std::condition_variable update_struct_cv;
 
+    BlockSlot()
+    {
+        data = new char[BLOCK_SIZE];
+    }
+
     ~BlockSlot()
     {
+        delete[] data;
         read_or_write_mutex.unlock();
     }
+};
+
+class SlotTool
+{
+public:
+    SlotSign GetSign(std::string db_name, std::string table_name, default_address_type offset);
 };
 
 

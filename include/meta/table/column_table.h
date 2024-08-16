@@ -205,7 +205,7 @@ public:
         size_t table_name_size = table_name.size();
         memcpy(buffer + offset, &table_name_size, sizeof(size_t));
         offset += sizeof(size_t);
-        std::cout << "table_name " << table_name << std::endl;
+        // std::cout << "table_name " << table_name << std::endl;
         memcpy(buffer + offset, table_name.c_str(), table_name_size);
         offset += table_name_size;
 
@@ -251,7 +251,7 @@ public:
             offset += sizeof(default_address_type);
         }
 
-        std::cout << "(size_t)buffer" << (size_t)buffer[0] << std::endl;
+        // std::cout << "(size_t)buffer" << (size_t)buffer[0] << std::endl;
         return std::make_pair(buffer, offset);
     }
 
