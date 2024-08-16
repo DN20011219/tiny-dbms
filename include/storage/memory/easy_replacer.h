@@ -11,7 +11,6 @@
 #include <list>
 
 
-#include "./buffer_pool.h"
 #include "./block_slot.h"
 #include "../../config.h"
 
@@ -24,7 +23,6 @@ private:
     std::list<BlockSlot*> slots_read_list;
 
 public:
-
     void ReadOne(BlockSlot* slot);
 
     std::list<BlockSlot*> GetFreeSlots();

@@ -18,7 +18,14 @@ class CalFileUrlUtil
 {
 
 private:
-    static std::string install_path;
+    std::string install_path;
+
+public:
+
+    CalFileUrlUtil()
+    {
+        GetInstallPathFromDisk();
+    }
 
     // get install path from file and store in cache
     void GetInstallPathFromDisk() 
@@ -28,22 +35,10 @@ private:
         getline(file_read, install_path);
         file_read.close();
         delete file_mm;
-
-        if (install_path == "")
-        {
-            throw std::runtime_error("dbms has not been installed!");
-        }
-    }
-
-public:
-
-    CalFileUrlUtil()
-    {
-        GetInstallPathFromDisk();
     }
 
     // get install path from cache
-    static string GetInstallPath() 
+    string GetInstallPath() 
     {
         return install_path;
     }
@@ -52,9 +47,9 @@ public:
      * @brief Get the folder where installed base db,
      * @return The folder where installed base db.
      */ 
-    static string GetBaseDbFolder()
+    string GetBaseDbFolder()
     {
-        return GetDbFolder(DEFAULT_DB_FOLDER_NAME);
+        return GetDbFolder(DEFAULT_DB_FOLDER_NAME); // install/db_name
     }
 
     /**
@@ -62,8 +57,9 @@ public:
      * @param db_name db name
      * @return  The folder where installed input db.
      */
-    static string GetDbFolder(string db_name)
+    string GetDbFolder(string db_name)
     {
+        // install/db_name
         return GetInstallPath() + "/" + db_name;;
     }
 
@@ -72,27 +68,32 @@ public:
      * @param db_name db name
      * @return  The path where is he db file of input db.
      */
-    static string GetDefaultDbFile(string db_name)
+    string GetDefaultDbFile(string db_name)
     {   
+        // install/db_name/db_name.tvdb
         return GetDbFolder(db_name) + "/" + db_name + DB_FILE_SUFFIX;
     }
 
-    static string GetDefaultTablePath(string db_name)
+    string GetDefaultTablePath(string db_name)
     {   
+        // install/db_name/tables
         return GetDbFolder(db_name) + "/" + DEFAULT_TABLE_FOLDER;
     }
 
-    static string GetDefaultTableFile(string db_name)
-    {   
+    // string GetDefaultTableFile(string db_name)
+    // {   
+    //     // install/db_name/tables/default_table.tvdbb
+    //     return GetDefaultTablePath(db_name) + "/" + DEFAULT_TABLE_NAME + TABLE_FILE_SUFFIX;
+    // }
+
+    string GetTableHeaderFile(string db_name)
+    {
+        // install/db_name/tables/default_table.tvdbb
         return GetDefaultTablePath(db_name) + "/" + DEFAULT_TABLE_NAME + TABLE_FILE_SUFFIX;
     }
-
-    static string GetTableHeaderFile(string db_name, string table_name)
+    string GetTableDataFile(string db_name, string table_name)
     {
-        return GetDefaultTablePath(db_name) + "/" + table_name + TABLE_FILE_SUFFIX;
-    }
-    static string GetTableDataFile(string db_name, string table_name)
-    {
+        // install/db_name/tables/data/table_name.data
         return GetDefaultTablePath(db_name) + "/" + DEFAULT_TABLE_DATA_FOLDER + "/" + table_name + TABLE_DATA_FILE_SUFFIX;
     }
 };

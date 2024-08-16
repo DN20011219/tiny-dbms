@@ -56,20 +56,10 @@ public:
         
         field_length = 0;
         field_data_nums = 0;
-
-        // open one memory block, and make data* controlled by mm
-        // BufferPool* mm = BufferPool::GetInstance();
-        // mm->GetFreeDataBlock(data);
     }
 
     ~DataBlock()
     {
-        // std::cout << "delete data block!" << std::endl;
-        
-        // BufferPool* mm = BufferPool::GetInstance();
-        // mm->ReleaseBlock(data);
-
-        // std::cout << "delete data block end!" << std::endl;
     }
 
     // return true if the address is ok

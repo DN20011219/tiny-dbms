@@ -95,7 +95,7 @@ public:
         return file_write;
     }
 
-    void OpencvDirAndMkdir(const string& folder_path)
+    void OpenOrMkdir(const string& folder_path)
     {
         DIR * mydir =NULL;
         mydir=opendir(folder_path.c_str());

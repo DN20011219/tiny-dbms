@@ -101,20 +101,20 @@ struct Compare  // such as a = b, a != b, a > b, a < b
     string compare_value;
 };
 
-enum Operator
+enum OperatorEnum
 {
     AND,
     OR
 };
-Operator SwitchOperator(string value)
+OperatorEnum SwitchOperator(string value)
 {
     if (value == "AND")
     {
-        return Operator::AND;
+        return OperatorEnum::AND;
     } 
     else if (value == "OR")
     {
-        return Operator::OR;
+        return OperatorEnum::OR;
     } 
     else 
     {
@@ -125,7 +125,7 @@ struct Operation
 {
     Compare left_leaf;
     Operation* left_op;
-    Operator opreator;
+    OperatorEnum opreator;
     Compare right_leaf;
 };
 

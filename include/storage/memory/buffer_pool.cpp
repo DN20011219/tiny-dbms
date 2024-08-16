@@ -24,38 +24,42 @@ bool BufferPool::GetFreeSlot(BlockSlot*& slot)
         {
             slot = item;
             replacer->ReadOne(slot);
+
+            // reset failure times
+            std::unique_lock<std::mutex> lock(no_space_failure_times_mutex);
+            no_space_failure_times = 0;
+
             return true;
         }
+    }
+
+    // record the false times, if false frequence is too high (which means FreeSpace function is invalid), throw error to shut down the thread.
+    std::unique_lock<std::mutex> lock(no_space_failure_times_mutex);
+    no_space_failure_times++;
+
+    if (no_space_failure_times >= MAX_FAIL_TIMES)
+    {
+        throw std::runtime_error("No enough memory space error!");
+    } else {
+        FreeSpace();
     }
 
     return false;
 }
 
-bool BufferPool::ReleaseSlot(BlockSlot*& slot)
+void BufferPool::ReleaseSlot(BlockSlot*& slot)
 {
     slot->in_use = false;
     slot->user_amount = 0;
-
-    WakeUpWaitingThread();
 }
 
-std::list<BlockSlot*> BufferPool::FreeSpace(BlockSlot*& olest)
+std::list<BlockSlot*> BufferPool::FreeSpace()
 {
     std::list<BlockSlot*> free_list = replacer->GetFreeSlots();
-    // for (auto item : free_list)
-    // {
-    //     ReleaseSlot(item);
-    // }
-
-    // if (free_list.size() == 1)
-    // {
-    //     no_space_cv.notify_one();
-    // }
-    // else
-    // {
-    //     no_space_cv.notify_all();
-    // }
-    
+    if (free_list.size() > 0)
+    {
+        WakeUpWaitingThread();
+    }
     return free_list;
 }
 
@@ -67,7 +71,7 @@ void BufferPool::WaitForSpace()
 
 void BufferPool::WakeUpWaitingThread()
 {
-    no_space_cv.notify_one();
+    no_space_cv.notify_all();
 }
 
 }

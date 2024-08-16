@@ -60,7 +60,7 @@ public:
         // Check if the file path has the correct suffix
         string suffix = TABLE_DATA_FILE_SUFFIX;
         if ("." + file_path.substr(file_path.find_last_of(".") + 1) != suffix) {
-            throw std::runtime_error("Invalid file suffix. Expected:" + suffix + " but found" + file_path.substr(file_path.find_last_of(".") + 1));
+            throw std::runtime_error("Invalid file suffix. Expected:" + suffix + " but found" + file_path.substr(file_path.find_last_of(".")));
         }
 
         // Open the file in read-write mode
@@ -90,7 +90,7 @@ public:
     */
     void OpenTableFile(string file_path, fstream& file_stream)
     {   
-        std::cout << "OpenTableFile: " << file_path << std::endl;
+        // std::cout << "OpenTableFile: " << file_path << std::endl;
         // Check if the file path has the correct suffix
         string suffix = TABLE_FILE_SUFFIX;
         if ("." + file_path.substr(file_path.find_last_of(".") + 1) != suffix) {
@@ -109,7 +109,13 @@ public:
     void OpenFileWithoutCheck(string file_path, fstream& file_stream)
     {
         file_stream.open(file_path, std::ios::in | std::ios::out);
-                if (!file_stream.is_open()) {
+        if (!file_stream.is_open()) {
+            std::ofstream create_file(file_path);
+            create_file.close();
+            file_stream.open(file_path, std::ios::in | std::ios::out);
+        }
+        if (!file_stream.is_open()) 
+        {
             throw std::runtime_error("Failed to open file: " + file_path);
         }
     }
@@ -204,7 +210,8 @@ public:
     }
 
 
-       /**
+
+    /**
      * Reads a table block from a file
      * @param table_file_uri The URI of the table file
      * @param offset The offset of the block in the file
@@ -250,6 +257,7 @@ public:
         WriteBackBlock(file_stream, offset, block.data);
         file_stream.close();
     }
+    
     void WriteBackDataBlock(string data_file_uri, default_address_type offset, char* data)
     {
         fstream file_stream;

@@ -26,6 +26,8 @@
 #include "./worker.h"
 #include "./server.h"
 
+#include "../sql/executer/operator.h"
+
 using std::vector;
 using std::string;
 using std::map;
@@ -56,12 +58,15 @@ private:
     long msg_queue_id; string connect_ip; int connect_port; UserIdentity connect_identity; string connect_db_name; 
     Session* connect_result;
 
+    // use to connect
+    Operator* open_db_operator;
 public:
 
-    Connector(map<Session*, Worker*>& workers)
+    Connector(map<Session*, Worker*>& workers, Operator* op)
     {
         working = true;
         worker_map = workers;
+        open_db_operator = op;
     }
 
     ~Connector()
@@ -72,7 +77,6 @@ public:
 
     Session* Connect(string ip, int port, UserIdentity identity, string db_name)
     {
-        
         Session* new_session;
 
         // check session exist
@@ -87,12 +91,11 @@ public:
 
             // one ip and port can only connect one db as one role
             new_session->connect_state = false;
-            return new_session;     
+            return new_session;
             // throw std::runtime_error("connection has been created on :" + ip + " : " + std::to_string(port));
         }
 
-        // open db, and cache db_information
-
+        // check identity and power
         if (identity == UserIdentity::ROOT && db_name == DEFAULT_DB_FOLDER_NAME)
         {
             // root user open base_db
@@ -106,8 +109,7 @@ public:
             return new_session;
         }
 
-        // user or root open user db
-
+        CreateNewSession(new_session, ip, port, identity, db_name);
 
         return new_session;
     } 
@@ -122,6 +124,11 @@ public:
         new_session->connect_db_name = db_name;
         new_session->connector_identity = identity;
         
+        // open db file, and cache information storaged in disk about the db and tables
+        new_session->cached_db =  new DB();
+        new_session->cached_db->db_name = db_name;
+        open_db_operator->OpenDB(*new_session->cached_db);
+
         // store session
         sessions.push_back(new_session);
         session_map[ip + std::to_string(port)] = new_session;
@@ -130,7 +137,12 @@ public:
         new_session->connect_state = true;
 
         // create new worker, start the worker thread.
-        worker_map[new_session] = new Worker(new_session);
+        std::thread new_worker_thread([this, new_session]{
+            this->worker_map[new_session] = new Worker(new_session);
+            cout << "Worker: " << new_session->cached_db->db_name << " run successfully on: " << std::this_thread::get_id() << std::endl;
+            this->worker_map[new_session]->ListenThread();
+            });
+        new_worker_thread.detach();
     }
 
     bool GetSession(string ip, int port, Session*& session){
@@ -168,7 +180,6 @@ public:
             // get one detail message from special message queue(client send information msg to connect server)
             msgrcv(connector_msg_key, &msg, MSG_DATA_LENGTH, special_queue_id, 0);
             if (!working) break;
-
             {
                 // get connection information from input stream
                 msg_queue_id = msg.msg_type;   // cache the special queue id, and it will be used lately between client and the sql worker of the client
@@ -202,7 +213,25 @@ public:
                 connect_result = Connect(connect_ip, connect_port, connect_identity, connect_db_name);
 
                 // send connect result to sepcial queue
-                memcpy(msg.msg_data, &connect_result->connect_state, sizeof(bool));
+                default_length_size result_offset = 0;
+                // set connect state
+                int table_amount = connect_result->cached_db->tables.size();
+                memcpy(msg.msg_data + result_offset, &table_amount, sizeof(int));
+                result_offset += sizeof(int);
+                // set tables name
+                for (int i = 0; i < table_amount; i++) 
+                {
+                    if (result_offset > MSG_DATA_LENGTH)
+                    {
+                        break;
+                    }
+                    string table_name = connect_result->cached_db->tables[i].table_name + " | ";
+                    memcpy(msg.msg_data + result_offset, &table_name, sizeof(int));
+                    result_offset += connect_result->cached_db->tables[i].table_name.length() + 3;
+                }
+
+                // set db information: table amount, tables name
+                memcpy(msg.msg_data + result_offset, &connect_result->connect_state, sizeof(bool));
 
                 msg.msg_type = special_queue_id + 1; // send back use send_back_queue_id + 1, because this queue has been used to receive information msg sent by client
                 msgsnd(connector_msg_key, &msg, strlen(msg.msg_data) + 1, 0);

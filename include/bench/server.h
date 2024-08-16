@@ -9,6 +9,8 @@
 
 #include "./connector.h"
 
+#include "../sql/executer/operator.h"
+
 namespace tiny_v_dbms {
 
 class Server
@@ -16,15 +18,25 @@ class Server
     Connector* connector;
     map<Session*, Worker*> worker_map;
 
+    Operator* op;
+
 public:
     
     Server()
     {
-        connector = new Connector(worker_map);
+        // if db has not been installed, install
+        op = new Operator();
+        if (op->Install())
+        {
+            // 终止程序，要求重启
+        }
+
+        connector = new Connector(worker_map, op);
     }
 
     void Run()
-    {
+    {   
+        // Run connector
         connector->RunForwardThread();
     }
 

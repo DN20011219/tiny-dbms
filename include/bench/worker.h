@@ -41,10 +41,10 @@ public:
         user_session = user;
         working = true;
 
-        auto listen_thread = std::bind(&Worker::ListenThread, this);
-        std::thread fw_thread(listen_thread);
-
-        cout << "Worker: " << user->connect_db_name << " run successfully " << std::endl;
+        // auto listen_thread = std::bind(&Worker::ListenThread, this);
+        // std::thread fw_thread(listen_thread);
+        // ListenThread();
+        // cout << "Worker: " << user->connect_db_name << " run successfully on: " << std::this_thread::get_id() << std::endl;
     }
 
     ~Worker()
@@ -52,7 +52,8 @@ public:
         working = false;
 
         // delete pointer resource
-        delete executing_sql_response;
+        if (executing_sql_response != nullptr)
+            delete executing_sql_response;
     }
 
     void Work()

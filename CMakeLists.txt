@@ -16,4 +16,11 @@ project(tiny-vdbms)
 # add_subdirectory(./src)
 # add_subdirectory(./include)
 
-add_executable(app src/test/bench/demo_bench.cpp src/memory/memory_management.cpp)
+add_executable(
+    app 
+src/test/bench/demo_bench.cpp 
+include/storage/memory/block_slot.cpp
+include/storage/memory/easy_replacer.cpp
+include/storage/memory/buffer_pool.cpp
+include/storage/memory/lock_watcher.cpp
+)
