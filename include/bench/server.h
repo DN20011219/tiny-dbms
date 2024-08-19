@@ -37,6 +37,8 @@ public:
     void Run()
     {   
         // Run connector
+        // Create one thread to handle all request to base_db (create database sql)
+        connector->CreateNewSession();
         connector->RunForwardThread();
     }
 

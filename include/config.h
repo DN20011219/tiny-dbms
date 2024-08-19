@@ -69,19 +69,21 @@ namespace tiny_v_dbms {
     // config about enum data
     enum TABLE_TYPE {DEFAULT, COMMON};          // type of table, now no use
     enum column_type {NUMBER, VECTOR, VCHAR};
-    enum column_length {NUMBER_LENGTH = 4, VCHAR_LENGTH = 50};
+    // enum column_length {NUMBER_LENGTH = 4, VCHAR_LENGTH = 50};
     enum column_index_type {NONE, FLAT};
 
     // config about client and server
 
     #define CONNECTOR_MESSAGE_KEY ftok("tvdbms_connect", 7) 
     #define WORKER_MESSAGE_KEY ftok("tvdbms_work", 8) 
+    #define BASE_DATABSE_MESSAGE_KEY ftok("tvdbms_base_db_work", 9) 
     #define CONNECTOR_MESSAGE_ID 40286          // this id is used to confirm the msg queue set id used by connecter and clients
     #define WORKER_MESSAGE_ID 40287             // this id is used to confirm the msg queue set id used by workers and clients
     #define CONNECTOR_MSG_TYPE_SEND    100      // this type is used when server send msg to client
     #define CONNECTOR_MSG_TYPE_RECV    200      // this type is used when client send msg to server
-    #define WORKER_MSG_TYPE_SEND    100 
+    #define WORKER_MSG_TYPE_SEND    100         // 
     #define WORKER_MSG_TYPE_RECV    200 
+
 
     #define MSG_DATA_LENGTH 128                 // config about msg used by connecter
     #define IP_LENGTH 15
@@ -103,6 +105,16 @@ namespace tiny_v_dbms {
     #define WORKER_MSG_KEY
     const int worker_msg_key = msgget(ftok("/tmp/tvdbms_work", 8), IPC_CREAT | 0755);
     #endif // WORKER_MSG_KEY
+    
+    #ifndef BASE_DATABASE_WORKER_MSG_KEY
+    #define BASE_DATABASE_WORKER_MSG_KEY
+    const int base_db_worker_msg_key = msgget(ftok("/tmp/tvdbms_base_db_work", 9), IPC_CREAT | 0755);
+    #endif // BASE_DATABASE_WORKER_MSG_KEY
+
+    #ifndef FREE_QUEUE_ID_ARRAY
+    #define FREE_QUEUE_ID_ARRAY
+    const long free_queue_id_array[] = {1, 3, 5, 7, 9};
+    #endif // FREE_QUEUE_ID_ARRAY
 }
 
 #endif // VDBMS_CONFIG_H_

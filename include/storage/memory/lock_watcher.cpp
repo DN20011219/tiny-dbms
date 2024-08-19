@@ -64,7 +64,9 @@ void LockWatcher::LoadBlockForRead(std::string db_name, std::string table_name, 
     // get one free slot
     while (!buffer_pool->GetFreeSlot(slot))
     {
+        slots_map_mutex.unlock();
         buffer_pool->WaitForSpace();
+        slots_map_mutex.lock();
     }
 
     // update slot information
@@ -106,7 +108,9 @@ void LockWatcher::LoadBlockForWrite(std::string db_name, std::string table_name,
     // get one free slot
     while (!buffer_pool->GetFreeSlot(slot))
     {
+        slots_map_mutex.unlock();
         buffer_pool->WaitForSpace();
+        slots_map_mutex.lock();
     }
 
     // update slot information
@@ -126,7 +130,7 @@ void LockWatcher::LoadBlockForWrite(std::string db_name, std::string table_name,
 
 void LockWatcher::LoadBlockForRead(std::string db_name, std::string table_name, default_address_type offset, TableBlock& block)
 {
-    SlotSign sign = slot_tool->GetSign(db_name, table_name, offset);
+    SlotSign sign = slot_tool->GetSign(db_name, table_name + ".header", offset);
     BlockSlot* slot;
     
     // firstly check in map
@@ -149,7 +153,9 @@ void LockWatcher::LoadBlockForRead(std::string db_name, std::string table_name, 
     // get one free slot
     while (!buffer_pool->GetFreeSlot(slot))
     {
+        slots_map_mutex.unlock();
         buffer_pool->WaitForSpace();
+        slots_map_mutex.lock();
     }
 
     // update slot information
@@ -169,7 +175,7 @@ void LockWatcher::LoadBlockForRead(std::string db_name, std::string table_name, 
 
 void LockWatcher::LoadBlockForWrite(std::string db_name, std::string table_name, default_address_type offset, TableBlock& block)
 {
-    SlotSign sign = slot_tool->GetSign(db_name, table_name, offset);
+    SlotSign sign = slot_tool->GetSign(db_name, table_name + ".header", offset);
     BlockSlot* slot;
 
     // firstly check in map
@@ -191,7 +197,9 @@ void LockWatcher::LoadBlockForWrite(std::string db_name, std::string table_name,
     // get one free slot
     while (!buffer_pool->GetFreeSlot(slot))
     {
+        slots_map_mutex.unlock();
         buffer_pool->WaitForSpace();
+        slots_map_mutex.lock();
     }
 
     // update slot information
@@ -286,7 +294,7 @@ void LockWatcher::ReleaseWritingBlock(std::string db_name, std::string table_nam
         // remove from map
         slots_map.erase(sign);
         // release lock
-        slot->read_or_write_mutex.unlock_shared();
+        slot->read_or_write_mutex.unlock();
     }
 
     slots_map_mutex.unlock();
@@ -313,7 +321,7 @@ void LockWatcher::ReleaseWritingBlock(std::string db_name, std::string table_nam
         // remove from map
         slots_map.erase(sign);
         // release lock
-        slot->read_or_write_mutex.unlock_shared();
+        slot->read_or_write_mutex.unlock();
     }
 
     slots_map_mutex.unlock();
@@ -321,8 +329,10 @@ void LockWatcher::ReleaseWritingBlock(std::string db_name, std::string table_nam
 
 default_address_type LockWatcher::CreateNewBlock(std::string db_name, std::string table_name, DataBlock& block)
 {
-    BlockSlot* slot;
+    slots_map_mutex.lock();
 
+    BlockSlot* slot;
+    
     default_address_type new_block_offset = bfmm->GetNewBlockAddress(cal_url_util->GetTableDataFile(db_name, table_name));
 
     SlotSign sign = slot_tool->GetSign(db_name, table_name, new_block_offset);
@@ -330,7 +340,9 @@ default_address_type LockWatcher::CreateNewBlock(std::string db_name, std::strin
     // get one free slot
     while (!buffer_pool->GetFreeSlot(slot))
     {
+        slots_map_mutex.unlock();
         buffer_pool->WaitForSpace();
+        slots_map_mutex.lock();
     }
 
     // update slot information
@@ -343,13 +355,17 @@ default_address_type LockWatcher::CreateNewBlock(std::string db_name, std::strin
     // set pointer
     block.data = slot->data;
 
-    bfmm->WriteBackDataBlock(cal_url_util->GetTableDataFile(db_name, table_name), new_block_offset, block);
+    // bfmm->WriteBackDataBlock(cal_url_util->GetTableDataFile(db_name, table_name), new_block_offset, block);
+
+    slots_map_mutex.unlock();
 
     return new_block_offset;
 }
 
 default_address_type LockWatcher::CreateNewBlock(std::string db_name, std::string table_name, TableBlock& block)
 {
+    slots_map_mutex.lock();
+
     BlockSlot* slot;
 
     default_address_type new_block_offset = bfmm->GetNewBlockAddress(cal_url_util->GetTableHeaderFile(db_name));
@@ -359,7 +375,9 @@ default_address_type LockWatcher::CreateNewBlock(std::string db_name, std::strin
     // get one free slot
     while (!buffer_pool->GetFreeSlot(slot))
     {
+        slots_map_mutex.unlock();
         buffer_pool->WaitForSpace();
+        slots_map_mutex.lock();
     }
 
     // update slot information
@@ -373,7 +391,9 @@ default_address_type LockWatcher::CreateNewBlock(std::string db_name, std::strin
     block.table_amount = 0;
     block.data = slot->data;
 
-    bfmm->WriteBackTableBlock(cal_url_util->GetTableHeaderFile(db_name), new_block_offset, block);
+    // bfmm->WriteBackTableBlock(cal_url_util->GetTableHeaderFile(db_name), new_block_offset, block);
+
+    slots_map_mutex.unlock();
 
     return new_block_offset;
 }

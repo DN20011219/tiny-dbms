@@ -42,7 +42,7 @@ public:
         memcpy(msg.msg_data, &communicate_queue_id, sizeof(long)); // special queue id
         msgsnd(connector_msg_key, &msg, MSG_DATA_LENGTH, 0);
 
-        std::cout << "have send msg to: " << CONNECTOR_MSG_TYPE_RECV << std::endl;
+        std::cout << "have send msg to: " << CONNECTOR_MSG_TYPE_RECV << "  data is: " << communicate_queue_id << std::endl;
 
         // set information about the second msg
         msg.msg_type = communicate_queue_id; // use special queue
@@ -58,14 +58,18 @@ public:
         std::cout << "have received msg from: " << communicate_queue_id + 1 << std::endl;
 
         bool state;
-        memcpy(&state, msg.msg_data, sizeof(bool));
+        string connect_result = ConnectMsg::DeserializeConnectResult(msg, state);
+
         // check connection state
         if (!state)
         {   
             throw std::runtime_error("Client connect to server fail! db_name: " + db_name);
         }
 
-        std::cout << "Connect success!" << std::endl;
+        std::cout << "-----------Connect result-----------" << std::endl;
+        std::cout << connect_result << std::endl;
+        std::cout << "-----------Connect result-----------" << std::endl;
+
 
         // handle sql
         if (worker_msg_key < 0)
