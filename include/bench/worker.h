@@ -112,6 +112,54 @@ public:
             executing_sql_response = nullptr;
         }
     }
+    
+    void BaseDBListenThread()
+    {   
+        // check msg queue is ready
+        if (base_db_worker_msg_key < 0)
+        {
+            throw std::runtime_error("base_db_worker_msg_key queue not start successfully");
+        }
+        
+        cout << "base_db_worker_msg_key: " << base_db_worker_msg_key << endl;
+
+
+        WorkMsg work_msg;
+        long send_back_id = user_session->msg_queue_id + 1; // store the send back queue id
+
+        while(working)
+        {   
+            // receive one command msg
+
+            // check command type
+            bool create_or_drop; // true is create
+            memcpy(&create_or_drop, work_msg.msg_data, sizeof(bool));
+
+            // get create db name
+            default_length_size name_length;
+            memcpy(&name_length, work_msg.msg_data + sizeof(bool), sizeof(default_length_size));
+            assert(name_length < SQL_MAX_LENGTH);
+
+            // // store sql
+            char* db_name_c = new char[name_length];
+            memcpy(db_name_c, work_msg.msg_data + sizeof(bool) + sizeof(default_length_size), name_length);
+            string db_name(db_name_c);
+            delete[] db_name_c;
+
+            // execute 
+            // Work();
+
+            // write response to queue
+            executing_sql_response->Serialize(work_msg.msg_data);
+            work_msg.msg_type = send_back_id;
+            msgsnd(base_db_worker_msg_key, &work_msg, executing_sql_response->GetLength(), 0);
+
+            // free resource
+            delete executing_sql_response;
+            executing_sql_response = nullptr;
+        }
+    }
+
 
 
 };

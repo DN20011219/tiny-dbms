@@ -56,7 +56,6 @@ public:
     */
     void OpenDataFile(string& file_path, fstream& file_stream)
     {   
-        std::cout << "OpenDataFile: " << file_path << std::endl;
         // Check if the file path has the correct suffix
         string suffix = TABLE_DATA_FILE_SUFFIX;
         if ("." + file_path.substr(file_path.find_last_of(".") + 1) != suffix) {

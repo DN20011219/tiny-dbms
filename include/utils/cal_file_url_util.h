@@ -66,7 +66,7 @@ public:
     /**
      * @brief Get the db file of input db.
      * @param db_name db name
-     * @return  The path where is he db file of input db.
+     * @return  The path where is the db file of input db.
      */
     string GetDefaultDbFile(string db_name)
     {   
@@ -90,6 +90,12 @@ public:
     {
         // install/db_name/tables/default_table.tvdbb
         return GetDefaultTablePath(db_name) + "/" + DEFAULT_TABLE_NAME + TABLE_FILE_SUFFIX;
+    }
+
+    string GetTableDataFolder(string db_name)
+    {
+        // install/db_name/tables/data
+        return GetDefaultTablePath(db_name) + "/" + DEFAULT_TABLE_DATA_FOLDER;
     }
     string GetTableDataFile(string db_name, string table_name)
     {

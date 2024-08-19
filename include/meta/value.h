@@ -45,6 +45,23 @@ ValueType GetValueTypeFromStr(string value_str)
     throw std::runtime_error("can not parse value type: " + value_str);
 }
 
+default_length_size GetValueTypeLength(ValueType type)
+{
+    switch (type)
+    {
+    case INT_T:
+        return sizeof(int);
+    case FLOAT_T:
+        return sizeof(float);
+    case VCHAR_T:
+        return 50;
+    case RAW_VALUE:
+        return sizeof(int);
+    default:
+        throw std::runtime_error("Can not get value length");
+    }
+}
+
 class Value
 {
 
