@@ -149,13 +149,13 @@ public:
                 break;
             }
 
-            if (command == "default")
+            if (command == "root")
             {
                 BuildDefaultClient();
                 continue;
             }
 
-            if (command == "new")
+            if (command == "user")
             {
                 BuildClient();
                 continue;
@@ -166,7 +166,7 @@ public:
     void BuildDefaultClient()
     {
         Client* cli = new Client();
-        cli->RunClient("192.168.10.224", 8080, 0, "base_db", queue_list_range[used_queue_id++]);
+        cli->RunClient("192.0.0.0", 0, 0, "base_db", queue_list_range[used_queue_id++]);
         delete cli;
     }
 

@@ -94,22 +94,17 @@ public:
             return new_session;
         }
 
-        // user can not connect the base db
         if (db_name == DEFAULT_DB_FOLDER_NAME)
         {
-            // user open base_db, reject    
-            new_session = new Session();
-            new_session->connect_state = false;
+            // create one unique worker thread which can send db_msg to db_worker_thread
+            CreateNewRootSession(new_session, ip, port);
+
+            // add session to cache
+            sessions.push_back(new_session);
+            session_map[ip + std::to_string(port)] = new_session;
+            
             return new_session;
         }
-        // check identity and power
-        // if (identity == UserIdentity::USER && db_name == DEFAULT_DB_FOLDER_NAME)
-        // {
-        //     // user open base_db, reject    
-        //     new_session = new Session();
-        //     new_session->connect_state = false;
-        //     return new_session;
-        // }
 
         CreateNewSession(new_session, ip, port, identity, db_name);
         
@@ -125,7 +120,7 @@ public:
     {
         Session* new_session;
         new_session = new Session();
-        new_session->msg_queue_id = "";
+        new_session->msg_queue_id = 0;
         new_session->client_ip = "0.0.0.0";
         new_session->client_port = 0;
         new_session->connect_db_name = DEFAULT_DB_FOLDER_NAME;
@@ -140,13 +135,42 @@ public:
 
         std::thread new_worker_thread([this, new_session]{
             this->worker_map[new_session] = new Worker(new_session);
-            cout << "Worker: " << new_session->cached_db->db_name << " run successfully on: " << std::this_thread::get_id() << std::endl;
-            this->worker_map[new_session]->ListenThread();
+            cout << "DB Worker: " << new_session->cached_db->db_name << " run successfully on: " << std::this_thread::get_id() << std::endl;
+            this->worker_map[new_session]->BaseDBListenThread();
             });
         new_worker_thread.detach();
     }
 
-    void CreateNewSession(Session* new_session, string ip, int port, UserIdentity identity, string db_name)
+    void CreateNewRootSession(Session*& new_session, string ip, int port)
+    {
+        // create new session
+        new_session = new Session();
+        new_session->msg_queue_id = msg_queue_id;
+        new_session->client_ip = ip;
+        new_session->client_port = port;
+        new_session->connect_db_name = DEFAULT_DB_FOLDER_NAME;
+        new_session->connector_identity = ROOT;
+        
+        // get cache db from db_worker_thread
+        new_session->cached_db = session_map[DEFAULT_DB_FOLDER_NAME]->cached_db;
+
+        // store session
+        sessions.push_back(new_session);
+        session_map[ip + std::to_string(port)] = new_session;
+
+        // set satate
+        new_session->connect_state = true;
+
+        // create new worker, start the worker thread.
+        std::thread new_worker_thread([this, new_session]{
+            this->worker_map[new_session] = new Worker(new_session);
+            cout << "Worker: " << new_session->cached_db->db_name << " run successfully on: " << std::this_thread::get_id() << std::endl;
+            this->worker_map[new_session]->RootIdentityListenThread();
+            });
+        new_worker_thread.detach();
+    }
+
+    void CreateNewSession(Session*& new_session, string ip, int port, UserIdentity identity, string db_name)
     {
         // create new session
         new_session = new Session();
@@ -157,10 +181,13 @@ public:
         new_session->connector_identity = identity;
         
         // open db file, and cache information storaged in disk about the db and tables
+        // check db exist
+        session_map[DEFAULT_DB_FOLDER_NAME]->cached_db->tables;
+        // open db
         new_session->cached_db = new DB();
         new_session->cached_db->db_name = db_name;
         open_db_operator->OpenDB(*new_session->cached_db);
-
+        
         // store session
         sessions.push_back(new_session);
         session_map[ip + std::to_string(port)] = new_session;
@@ -247,7 +274,7 @@ public:
             ConnectMsg::SerializeConnectResult(connect_result, msg);
 
             msg.msg_type = special_queue_id + 1; // send back use send_back_queue_id + 1, because this queue has been used to receive information msg sent by client
-            msgsnd(connector_msg_key, &msg, strlen(msg.msg_data) + 1, 0);
+            msgsnd(connector_msg_key, &msg, MSG_DATA_LENGTH, 0);
                 
             connect_result = nullptr;
         }   

@@ -21,7 +21,8 @@ enum SqlState
     UNSUBMIT,
     PARSE_ERROR,
     EXECUTING,
-    SUCCESS
+    SUCCESS,
+    FAILURE
 };
 
 struct SqlCommit
@@ -51,7 +52,8 @@ struct SqlResponse
         memcpy(buffer + offset, &information_length, sizeof(int));
         offset += sizeof(int);
         
-        memcpy(buffer + offset, information.c_str(), information_length);
+        if (information_length > 0)
+            memcpy(buffer + offset, information.c_str(), information_length);
     }
 
     void Deserialize(char* buffer)
@@ -65,9 +67,12 @@ struct SqlResponse
         memcpy(&information_length, buffer + offset, sizeof(int));
         offset += sizeof(int);
         
-        char* inform = new char[information_length];
-        memcpy(inform, buffer + offset, information_length);
-        information.assign(inform);
+        if (information_length > 0)
+        {
+            char* inform = new char[information_length];
+            memcpy(inform, buffer + offset, information_length);
+            information.assign(inform);
+        }
     }
 };
 

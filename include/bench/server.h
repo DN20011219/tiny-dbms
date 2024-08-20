@@ -37,8 +37,11 @@ public:
     void Run()
     {   
         // Run connector
+
         // Create one thread to handle all request to base_db (create database sql)
-        connector->CreateNewSession();
+        connector->RunBaseDBThread();
+
+        // run forward thread to execute connect request
         connector->RunForwardThread();
     }
 

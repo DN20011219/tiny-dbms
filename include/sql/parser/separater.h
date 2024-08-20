@@ -18,8 +18,10 @@ namespace tiny_v_dbms {
 
 bool IsKeyword(const std::string& word) {
 
-    for (const auto& keyword : KEY_WORDS) {
-        if (word == keyword) {
+    for (const auto& keyword : KEY_WORDS) 
+    {
+        if (word == keyword) 
+        {
             return true;
         }
     }
@@ -40,43 +42,60 @@ std::vector<Token> Tokenize(const std::string& sql)
         }
 
 
-        if (isalpha(sql[i]) || sql[i] == '_') {
+        if (isalpha(sql[i]) || sql[i] == '_') 
+        {
             std::string word;
-            while (i < sql.length() && (isalnum(sql[i]) || sql[i] == '_' || sql[i] == '*')) {
+            while (i < sql.length() && (isalnum(sql[i]) || sql[i] == '_' || sql[i] == '*')) 
+            {
                 word += toupper(sql[i]);
                 ++i;
             }
-            if (IsKeyword(word)) {
+            if (IsKeyword(word)) 
+            {
                 tokens.push_back(Token(KEYWORD_T, word));
-            } else {
+            } 
+            else 
+            {
                 tokens.push_back(Token(IDENTIFIER_T, word));
             }
-        } else if (isdigit(sql[i])) {
+        } 
+        else if (isdigit(sql[i])) 
+        {
             std::string number;
-            while (i < sql.length() && (isdigit(sql[i]) || sql[i] == '.')) {
+            while (i < sql.length() && (isdigit(sql[i]) || sql[i] == '.')) 
+            {
                 number += sql[i];
                 ++i;
             }
             tokens.push_back(Token(NUMBER_T, number));
-        } else if (sql[i] == '\'' || sql[i] == '\"') {
+        } 
+        else if (sql[i] == '\'' || sql[i] == '\"') 
+        {
             char quoteType = sql[i];
             std::string str;
             str += sql[i++];
-            while (i < sql.length() && sql[i] != quoteType) {
+            while (i < sql.length() && sql[i] != quoteType) 
+            {
                 str += sql[i++];
             }
-            if (i < sql.length()) {
+            if (i < sql.length()) 
+            {
                 str += sql[i++];
                 tokens.push_back(Token(STRING_T, str));
-            } else {
+            } else 
+            {
                 tokens.clear();
                 return tokens;
             }
-        } else if (ispunct(sql[i])) {
+        } 
+        else if (ispunct(sql[i])) 
+        {
             std::string op;
             op += sql[i++];
             tokens.push_back(Token(OPERATOR_T, op));
-        } else {
+        } 
+        else 
+        {
             tokens.clear();
             return tokens;
         }
@@ -86,9 +105,11 @@ std::vector<Token> Tokenize(const std::string& sql)
 }
 
 void PrintTokens(const std::vector<Token>& tokens) {
-   for (Token token : tokens) {
+   for (Token token : tokens) 
+   {
        std::string type;
-       switch (token.type) {
+       switch (token.type) 
+       {
            case KEYWORD_T: type = "KEYWORD"; break;
            case IDENTIFIER_T: type = "IDENTIFIER"; break;
            case OPERATOR_T: type = "OPERATOR"; break;

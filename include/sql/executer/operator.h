@@ -458,6 +458,7 @@ public:
             return true;
         }
 
+        // TODO: check db exist!
         OpenUserDB(db);
         return true;
 
@@ -477,9 +478,27 @@ public:
         LoadTables(db);
     }
     
-    bool CheckDBExist(DB& db)
+    // 写到这里了，日志和
+    bool CheckDBExist(DB* base_db, string db_name)
     {
+        // open the default_table data file, to find whether the db_name exists
+        DataBlock block;
+        default_length_size first_block_offset;
+        // load -> use -> close
+        bool has_next = LoadFirstDataBlock(*base_db, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, first_block_offset, block);
         
+        while(has_next)
+        {
+
+        }
+
+        return false;
+    }
+
+    // 
+    void FilterEqual(DataBlock* block, char* value, char* result_value)
+    {
+
     }
 
     // read table headers stored in default_table.tvdbb
@@ -520,7 +539,7 @@ public:
     }
     
     // return: have next block
-    bool LoadFirstDataBlock(DB db, string table_name, string col_name, DataBlock& block, string& data_file_url)
+    bool LoadFirstDataBlock(DB db, string table_name, string col_name, default_length_size& first_block_offset, DataBlock& block)
     {
         ColumnTable* table = nullptr;
 
@@ -532,30 +551,29 @@ public:
                 table = &item;
             }
         }
-
-        // if not found table
         if (table == nullptr)
+        {
             throw std::runtime_error("DB has no table named " + table_name);
-
-        // get column information
+        }
+            
+        // check column exists
         default_length_size column_offset = 0;
         while (column_offset < table->column_size)
         {
             if (table->columns.column_name_array[column_offset] == col_name)
             {
+                first_block_offset = table->columns.column_storage_address_array[column_offset];
                 break;
             }
             column_offset++;
         }
-
-        // if not found column
         if (column_offset >= table->column_size)
         {
-            throw std::runtime_error("table has no column " + col_name);
+            throw std::runtime_error("table has no column named " + col_name);
         }
 
         // read the first data block of the column
-        lw->LoadBlockForRead(db.db_name, table_name, table->columns.column_storage_address_array[column_offset], block);
+        lw->LoadBlockForRead(db.db_name, table_name, first_block_offset, block);
         
         // TODO: close block!
 

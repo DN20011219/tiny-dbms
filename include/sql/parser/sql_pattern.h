@@ -421,11 +421,12 @@ public:
             sql = new SelectFromOneTableSql(tokens);
             ast = new AST(SELECT_FROM_ONE_TABLE_NODE, sql);
             break;
-            
         // TODO: more sql support is on designing
+
+        case UNSUPPORT_NODE:
+            return nullptr;
         default:
-            throw std::runtime_error("Can not parse sql to node!");
-            break;
+            return nullptr;
         }
         return ast;
     }
