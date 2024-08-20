@@ -9,14 +9,28 @@
 #ifndef VDBMS_SQL_PARSER_PARSER_H_
 #define VDBMS_SQL_PARSER_PARSER_H_
 
+#include "ast.h"
 #include "sql_pattern.h"
+#include "separater.h"
 
 namespace tiny_v_dbms {
 
 class Parser
 {
 
+private:
+    NodeBuilder* node_builder;
+
 public:
+    Parser()
+    {
+        node_builder = new NodeBuilder();
+    }
+    
+    ~Parser()
+    {
+        delete node_builder;
+    }
 
     NodeType ParseSql(std::vector<Token> sql_tokens)
     {
@@ -29,7 +43,14 @@ public:
             }
             pattern_flag++;
         }
-        throw std::runtime_error("Can not parse sql!");
+
+        return UNSUPPORT_NODE;
+    }
+
+    AST* BuildAST(string sql_tokens)
+    {
+        std::vector<Token> tokens = Tokenize(sql_tokens);
+        return node_builder->BuildNode(tokens, ParseSql(tokens));
     }
 
 };

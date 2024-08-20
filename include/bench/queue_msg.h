@@ -92,11 +92,10 @@ typedef struct ConnectMsg{
         result_offset += sizeof(default_length_size);
 
         // get tables view str
-        char* table_name_view_str = new char[table_name_view_str_length + 1];
+        char* table_name_view_str = new char[table_name_view_str_length];
         memcpy(table_name_view_str, msg.msg_data + result_offset, table_name_view_str_length);
-        table_name_view_str[table_name_view_str_length] = '\0'; // null-terminate the string
         result_offset += table_name_view_str_length;
-        connect_result += "Table Names: " + std::string(table_name_view_str) + "\n";
+        connect_result += "Table Names: " + std::string(table_name_view_str);
 
         delete[] table_name_view_str;
 
@@ -108,6 +107,35 @@ typedef struct ConnectMsg{
 typedef struct WorkMsg{
     long msg_type;
     char msg_data[WORK_MSG_DATA_LENGTH]; // sql_length[4]: 16 | sql[196]: select * from a;
+
+    void DeserializeCreateDropDBMessage(bool& is_create, string& db_name) {
+        // check command type
+        memcpy(&is_create, msg_data, sizeof(bool));
+
+        // get create/drop db name
+        default_length_size name_length;
+        memcpy(&name_length, msg_data + sizeof(bool), sizeof(default_length_size));
+        assert(name_length < SQL_MAX_LENGTH);
+
+        // store sql
+        char* db_name_c = new char[name_length];
+        memcpy(db_name_c, msg_data + sizeof(bool) + sizeof(default_length_size), name_length);
+        db_name.assign(db_name_c, name_length);
+        delete[] db_name_c;
+    }
+
+    void SerializeCreateDropDBMessage(bool is_create, const string& db_name) {
+        // serialize command type
+        memcpy(msg_data, &is_create, sizeof(bool));
+
+        // serialize db name length
+        default_length_size name_length = db_name.size();
+        memcpy(msg_data + sizeof(bool), &name_length, sizeof(default_length_size));
+
+        // serialize db name
+        memcpy(msg_data + sizeof(bool) + sizeof(default_length_size), db_name.c_str(), name_length);
+    }
+
 }WorkMsg;
 
 }

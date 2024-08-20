@@ -137,8 +137,7 @@ class Sql
 
 class CreateDatabaseSql : public Sql
 {
-    friend class AST;
-private:   
+public: 
     string db_name;
 
 public:
@@ -151,8 +150,7 @@ public:
 };
 class CreateTableSql : public Sql
 {
-    friend class AST;
-private:  
+public:
     string table_name;
     vector<Column> columns;
 
@@ -202,8 +200,7 @@ public:
 };
 class InsertIntoTableSql : public Sql
 {
-    friend class AST;
-private:  
+public:
     string table_name;
     vector<Column> columns;
     vector<Value> values;
@@ -269,8 +266,7 @@ public:
 // only support easy select such as: select a, b, c from table_1 where e > 2 AND e = 2 OR a <> "test";
 class SelectFromOneTableSql : public Sql
 {
-    friend class AST;
-private:  
+public:
     string table_name;
     vector<Column> columns;
     // map<string, Column*> column_map;
@@ -473,8 +469,7 @@ public:
 // };
 struct DropDatabaseSql : public Sql
 {
-    friend class AST;
-private:  
+public:
     string db_name;
 
 public:
@@ -482,8 +477,7 @@ public:
 };
 struct DropTableSql : public Sql
 {
-    friend class AST;
-private:  
+public:
     string table_name;
 
 public:
@@ -494,6 +488,8 @@ class AST
 {
 private:
     NodeType node_type;
+
+public:
 
     CreateDatabaseSql* create_database_sql;
     CreateTableSql* create_table_sql;
