@@ -16,7 +16,7 @@
 0 ---------block begin 4kb----------------------
 0 | field length (20) |
 4 | field_data_nums (1)|
-8 | pre_block_pointer (0x0000) |
+8 | last record start address (4075) |
 12| next_block_pointer (0x0000) |
 
 4075 | field data (contains 20 byte data)|
@@ -45,7 +45,7 @@ public:
     // information about this block
     default_length_size field_length;           // length of per field
     default_length_size field_data_nums;        // amount of data
-    default_address_type pre_block_pointer;     // store a pointer to pre block, if has pre block
+    default_address_type last_record_start_address;     // last record start address, use to cal free space
     default_address_type next_block_pointer;    // store a pointer to next block, if has next block
 
     // not serialize field
@@ -64,9 +64,9 @@ public:
 
     // return true if the address is ok
     // return false when there has no space to contain the data in this block
-    bool CalBeginAddress(default_address_type& address)
+    bool CalBeginAddress(default_address_type& address, default_length_size data_size)
     {   
-        address = BLOCK_SIZE - field_data_nums * field_length;
+        address = last_record_start_address - data_size;
 
         // if this block has no space to contain this table
         if (address < 2 * sizeof(default_length_size) + 2 * sizeof(default_address_type))
@@ -76,13 +76,14 @@ public:
         return true;
     }
 
-    void InsertData(char* insert_data)
+    void InsertData(char* insert_data, default_length_size data_size)
     {   
         field_data_nums++;
         default_address_type address;
-        if (CalBeginAddress(address))
+        if (CalBeginAddress(address, data_size))
         {   
-            memcpy(data + address, insert_data, field_length);
+            memcpy(data + address, insert_data, data_size);
+            last_record_start_address = address;
         }
         else{
             throw std::runtime_error("Failed to insert data in block, need more space");
@@ -150,7 +151,7 @@ public:
         memcpy(data + offset, &field_data_nums, sizeof(default_length_size));
         offset += sizeof(default_length_size);
 
-        memcpy(data + offset, &pre_block_pointer, sizeof(default_address_type));
+        memcpy(data + offset, &last_record_start_address, sizeof(default_address_type));
         offset += sizeof(default_address_type);
 
         memcpy(data + offset, &next_block_pointer, sizeof(default_address_type));
@@ -173,8 +174,8 @@ public:
         memcpy(&field_data_nums, buffer + offset, sizeof(default_length_size));
         offset += sizeof(default_length_size);
 
-        // Read the pre block pointer
-        memcpy(&pre_block_pointer, buffer + offset, sizeof(default_address_type));
+        // Read the last_record_start_address
+        memcpy(&last_record_start_address, buffer + offset, sizeof(default_address_type));
         offset += sizeof(default_address_type);
 
         // Read the next block pointer
@@ -184,12 +185,12 @@ public:
 
     default_length_size GetSpaceCost()
     {
-        return 2 * sizeof(default_length_size) + 2 * sizeof(default_address_type) + field_data_nums * field_length;
+        return 2 * sizeof(default_length_size) + 2 * sizeof(default_address_type) + (BLOCK_SIZE - last_record_start_address);
     }
 
-    bool HaveSpace()
+    bool HaveSpace(default_length_size value_length)
     {
-        if (BLOCK_SIZE - GetSpaceCost() > field_length)
+        if (BLOCK_SIZE - GetSpaceCost() > value_length)
         {
             return true;
         }

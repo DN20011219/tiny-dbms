@@ -16,6 +16,7 @@
 #include "../sql/sql_struct.h"
 
 // 
+#include "../sql/executer/operator.h"
 #include "../sql/parser/parser.h"
 #include "../sql/parser/ast.h"
 
@@ -34,20 +35,23 @@ private:
     Session* user_session;
     bool working;
 
+    // shared base db
+    DB* base_db;
+
     // information about sql
     string executing_sql;
     SqlResponse* executing_sql_response;
     
     // execute tools
     Parser* parser;
+    Operator* op;
 
 public:
 
-    Worker(Session* user)
+    Worker(Session* user, Operator* used_op, DB* base_db) : op(used_op), base_db(base_db)
     {
         user_session = user;
         working = true;
-
         parser = new Parser();
     }
 
@@ -75,6 +79,7 @@ public:
             executing_sql_response = new SqlResponse();
             executing_sql_response->sql_state = FAILURE;
             executing_sql_response->information = "Sql can not be parsed!";
+            return;
         }
 
         // can not execute sql about database
@@ -83,6 +88,7 @@ public:
             executing_sql_response = new SqlResponse();
             executing_sql_response->sql_state = FAILURE;
             executing_sql_response->information = "This connection has no power to change db construct!";
+            return;
         }
         
         // TODO: execute other type of sql
@@ -98,7 +104,7 @@ public:
     void RootIdentityWork()
     {
         // execute sql
-        cout << "input sql: " << executing_sql << endl;
+        cout << "input root sql: " << executing_sql << endl;
         
         AST* ast = parser->BuildAST(executing_sql);
 
@@ -108,12 +114,33 @@ public:
             executing_sql_response = new SqlResponse();
             executing_sql_response->sql_state = FAILURE;
             executing_sql_response->information = "Sql can not be parsed!";
+            return;
         }
 
         // execute sql about database
         if (ast->GetType() == CREATE_DATABASE_NODE)
         {
             WorkMsg database_msg;
+            database_msg.msg_type = BASE_DB_WORKER_RECEIVE_QUEUE_ID;
+            memcpy(database_msg.msg_data, &user_session->msg_queue_id, sizeof(long));
+            msgsnd(base_db_worker_msg_key, &database_msg, WORK_MSG_DATA_LENGTH, 0);
+
+            database_msg.msg_type = user_session->msg_queue_id;
+            database_msg.SerializeCreateDropDBMessage(true, ast->create_database_sql->db_name);
+            msgsnd(base_db_worker_msg_key, &database_msg, WORK_MSG_DATA_LENGTH, 0);
+            
+            msgrcv(base_db_worker_msg_key, &database_msg, WORK_MSG_DATA_LENGTH, user_session->msg_queue_id + 1, 0);
+            executing_sql_response = new SqlResponse();
+            executing_sql_response->Deserialize(database_msg.msg_data);
+            return;
+        }
+        else if (ast->GetType() == DROP_DATABASE_NODE)
+        {
+            WorkMsg database_msg;
+            database_msg.msg_type = BASE_DB_WORKER_RECEIVE_QUEUE_ID;
+            memcpy(database_msg.msg_data, &user_session->msg_queue_id, sizeof(long));
+            msgsnd(base_db_worker_msg_key, &database_msg, WORK_MSG_DATA_LENGTH, 0);
+
             database_msg.msg_type = user_session->msg_queue_id;
             database_msg.SerializeCreateDropDBMessage(true, ast->create_database_sql->db_name);
             msgsnd(base_db_worker_msg_key, &database_msg, WORK_MSG_DATA_LENGTH, 0);
@@ -121,17 +148,7 @@ public:
             msgrcv(base_db_worker_msg_key, &database_msg, WORK_MSG_DATA_LENGTH, user_session->msg_queue_id + 1, 0);
             executing_sql_response = new SqlResponse();
             executing_sql_response->Deserialize(database_msg.msg_data);
-        }
-        else if (ast->GetType() == DROP_DATABASE_NODE)
-        {
-            WorkMsg database_msg;
-            database_msg.msg_type = user_session->msg_queue_id;
-            database_msg.SerializeCreateDropDBMessage(false, ast->create_database_sql->db_name);
-            msgsnd(base_db_worker_msg_key, &database_msg, WORK_MSG_DATA_LENGTH, 0);
-
-            msgrcv(base_db_worker_msg_key, &database_msg, WORK_MSG_DATA_LENGTH, user_session->msg_queue_id + 1, 0);
-            executing_sql_response = new SqlResponse();
-            executing_sql_response->Deserialize(database_msg.msg_data);
+            return;
         }
         
         // TODO: execute other type of sql
@@ -141,7 +158,7 @@ public:
         executing_sql_response->sql_state = SqlState::SUCCESS;
         executing_sql_response->information = "success";
 
-         cout << "input executing_sql_response: " << executing_sql_response->information << endl;
+        cout << "input executing_sql_response: " << executing_sql_response->information << endl;
     }
 
     void ListenThread()
@@ -243,14 +260,17 @@ public:
         cout << "base_db_worker_msg_key: " << base_db_worker_msg_key << endl;
 
         WorkMsg work_msg;
-        long receive_queue_id = user_session->msg_queue_id;
-        long send_back_id = user_session->msg_queue_id + 1; // store the send back queue id
 
         while(working)
         {   
-            // receive one command msg
-            msgrcv(base_db_worker_msg_key, &work_msg, WORK_MSG_DATA_LENGTH, receive_queue_id, 0);
+            // receive one command msg, include the customized queue id 
+            msgrcv(base_db_worker_msg_key, &work_msg, WORK_MSG_DATA_LENGTH, user_session->msg_queue_id, 0);
+            long receive_queue_id;
+            memcpy(&receive_queue_id, work_msg.msg_data, sizeof(long));
+            long send_back_id = receive_queue_id + 1; // store the send back queue id
 
+            // receive 
+            msgrcv(base_db_worker_msg_key, &work_msg, WORK_MSG_DATA_LENGTH, receive_queue_id, 0);
             bool is_create; // true is create
             string db_name;
             work_msg.DeserializeCreateDropDBMessage(is_create, db_name);
@@ -259,7 +279,7 @@ public:
             if (is_create)
             {
                 // create db
-                // this->user_session->cached_db->tables;
+                executing_sql_response = op->CreateDB(base_db, db_name);
                 cout << "create db: " << db_name << endl;
             }
             else
@@ -269,12 +289,11 @@ public:
             }
 
             // write response to queue
-            SqlResponse table_sql_response;
-            table_sql_response.sql_state = SUCCESS;
             executing_sql_response->Serialize(work_msg.msg_data);
 
             work_msg.msg_type = send_back_id;
             msgsnd(base_db_worker_msg_key, &work_msg, executing_sql_response->GetLength(), 0);
+            delete executing_sql_response;
         }
     }
 

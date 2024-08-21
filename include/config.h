@@ -50,26 +50,32 @@ namespace tiny_v_dbms {
     #define TABLE_LOG_FILE_SUFFIX ".log"  
 
     // config about storage
-    #define MEMORY_SIZE 10737418239 / 4            // the size of the memory, any memory using need to acquire space here, 10737418239 byte (1g) / 4 = 256 mb
+    #define MEMORY_SIZE 10737418239 / 4             // the size of the memory, any memory using need to acquire space here, 10737418239 byte (1g) / 4 = 256 mb
     #define SLOT_AMOUNT 10737418239 / 4 / 4096      // the amount of slots on buffer pool
-    #define BLOCK_SIZE 4096                    // the size of one block is 4096 byte (4kb)
-    #define LOG_MANAGER_INSRANCE_AMOUNT 4096    // the log manager amount, it should as same as block amout in memory_management
+    #define BLOCK_SIZE 4096                         // the size of one block is 4096 byte (4kb)
+    #define LOG_MANAGER_INSRANCE_AMOUNT 4096        // the log manager amount, it should as same as block amout in memory_management
 
 
     // config about meta data toe
     #define BASE_VECTOR Vector<int, double>     // basic vector, LENGTH_TYPE is int, DATA_TYPE is double
 
     // config about default data type
-    #define default_length_size int            // use int as the default type of length.
+    #define default_length_size int             // use int as the default type of length.
     #define default_amount_type int             // use int as the default type of item amount.
     #define default_enum_type int               // use int to means enum item.
     #define default_address_type int            // use int as the default type to store address.
     #define default_pointer_size 4              // use 32bit as the default size of pointer, this may be need to change for adaption to 64bit device
+    #define default_long_int size_t             // use size_t as the long int type
 
     // config about enum data
     enum TABLE_TYPE {DEFAULT, COMMON};          // type of table, now no use
     enum column_type {NUMBER, VECTOR, VCHAR};
     // enum column_length {NUMBER_LENGTH = 4, VCHAR_LENGTH = 50};
+    #define VCHAR_LENGTH 50
+    #define INT_LENGTH sizeof(int)
+    #define FLOAT_LENGTH sizeof(float)
+    #define RAW_LENGTH 50
+
     enum column_index_type {NONE, FLAT};
 
     // config about client and server
@@ -83,6 +89,7 @@ namespace tiny_v_dbms {
     #define CONNECTOR_MSG_TYPE_RECV    200      // this type is used when client send msg to server
     #define WORKER_MSG_TYPE_SEND    100         // 
     #define WORKER_MSG_TYPE_RECV    200 
+    #define BASE_DB_WORKER_RECEIVE_QUEUE_ID 875
 
 
     #define MSG_DATA_LENGTH 128                 // config about msg used by connecter

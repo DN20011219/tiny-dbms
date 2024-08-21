@@ -11,17 +11,21 @@
 #include <iostream>
 
 #include "../../config.h"
+// meta struct
 #include "../../meta/db/db.h"
 #include "../../meta/value.h"
-#include "../../storage/file_management.h"
-#include "../../memory/memory_management.h"
+#include "../../meta/value_tag.h"
+// sql
+#include "../../sql/sql_struct.h"
 // memory buffer poll
+#include "../../storage/file_management.h"
+#include "../../storage/block_file_management.h"
 #include "../../storage/memory/lock_watcher.h"
 // table header & table data
 #include "../../meta/table/column_table.h"
 #include "../../meta/block/table_block.h"
 #include "../../meta/block/data_block.h"
-#include "../../storage/block_file_management.h"
+
 // log
 #include "../../memory/log_central_management.h"
 #include "../../meta/log.h"
@@ -68,129 +72,6 @@ private:
     BlockFileManagement* bfmm;
     LockWatcher* lw;
 
-    // get install path from file
-    // string GetInstallPath() 
-    // {
-    //     // string install_path;
-        
-    //     // std::ifstream file_read = file_mm->ReadOrCreateFile(INSTALL_PATH_CACHE_FILE);
-    //     // getline(file_read, install_path);
-    //     // file_read.close();
-
-    //     return lw->cal_url_util->GetInstallPath();
-    // }
-
-    // /**
-    //  * @brief Get the folder where installed base db,
-    //  * @return The folder where installed base db.
-    //  */ 
-    // string GetBaseDbFolder()
-    // {
-    //     return GetAndCreateDbFolder(DEFAULT_DB_FOLDER_NAME);
-    // }
-
-    // /**
-    //  * @brief Get the folder where installed input db. Read base install path from file
-    //  * @param db_name db name
-    //  * @return  The folder where installed input db.
-    //  */
-    // string GetAndCreateDbFolder(string db_name)
-    // {
-    //     if (GetInstallPath() == "")
-    //     {
-    //         throw std::runtime_error("dbms has not been installed!");
-    //     }
-    //     string db_folder = GetInstallPath() + "/" + db_name;
-    //     file_mm->OpencvDirAndMkdir(db_folder);
-    //     return db_folder;
-    // }
-
-    // /**
-    //  * @brief Get the db file of input db.
-    //  * @param db_name db name
-    //  * @return  The path where is he db file of input db.
-    //  */
-    // string GetAndCreateDefaultDbFile(string db_name)
-    // {   
-    //     // create db file, db file has the same name as db folder
-    //     string db_file_name = GetAndCreateDbFolder(db_name) + "/" + db_name + DB_FILE_SUFFIX;
-    //     file_mm->ReadOrCreateFile(db_file_name).close();
-    //     return db_file_name;
-    // }
-
-    // /**
-    //  * @brief Cal and return the default table path base on the input db path.
-    //  * @param db_path db folder path
-    //  * @return default table path of the input db path.
-    //  */
-    // string GetDefaultTablePath(string db_path)
-    // {   
-    //     // create table folder
-    //     string default_table_folder = db_path + "/" + DEFAULT_TABLE_FOLDER;
-    //     file_mm->OpencvDirAndMkdir(default_table_folder);
-    //     return default_table_folder;
-    // }
-
-    // /**
-    //  * @brief Cal and return the default table header file path base on the input tables path.
-    //  * @param tables_path tables folder path, like: install_path/base_db/tables
-    //  * @return default table path of the input db path.
-    //  */
-    // string GetAndCreateDefaultTableFile(string tables_path)
-    // {
-    //     string default_table_header_uri = tables_path + "/" + DEFAULT_TABLE_NAME + TABLE_FILE_SUFFIX;
-    //     file_mm->ReadOrCreateFile(default_table_header_uri).close();
-    //     return default_table_header_uri;
-    // }
-
-    // /**
-    //  * Reads a table block from a file
-    //  * @param table_file_uri The URI of the table file
-    //  * @param offset The offset of the block in the file
-    //  * @param new_block The TableBlock object to store the read data
-    // */
-    // void ReadOneTableBlock(string table_file_uri, default_address_type offset, TableBlock& new_block)
-    // {   
-    //     // read from disk
-    //     fstream file_stream;
-    //     bfmm->OpenTableFile(table_file_uri, file_stream);    // open table header file, like "test.tvdbb"
-    //     bfmm->ReadFromFile(file_stream, offset, new_block.data);
-    //     new_block.DeserializeFromBuffer(new_block.data);
-    //     file_stream.close();
-    // }
-
-    // /**
-    //  * Reads a data block from a file
-    //  * @param data_file_uri The URI of the data file
-    //  * @param offset The offset of the block in the file
-    //  * @param new_block The DataBlock object to store the read data
-    // */
-    // void ReadOneDataBlock(string data_file_uri, default_address_type offset, DataBlock& new_block)
-    // {
-    //     fstream file_stream;
-    //     bfmm->OpenDataFile(data_file_uri, file_stream);    // open table header file, like "test.data"
-    //     bfmm->ReadFromFile(file_stream, offset, new_block.data);
-    //     new_block.DeserializeFromBuffer(new_block.data);
-    //     file_stream.close();
-    // }
-
-    // void WriteBackTableBlock(string table_file_uri, default_address_type offset, TableBlock& block)
-    // {
-    //     fstream file_stream;
-    //     bfmm->OpenTableFile(table_file_uri, file_stream);   // open table header file, like "test.tvdbb"   
-    //     bfmm->WriteBackBlock(file_stream, offset, block.data);
-    //     file_stream.close();
-    // }
-
-    // void WriteBackDataBlock(string data_file_uri, default_address_type offset, DataBlock& block)
-    // {
-    //     block.Serialize();
-    //     fstream file_stream;
-    //     bfmm->OpenDataFile(data_file_uri, file_stream);    // open data file, like "test.data"   
-    //     bfmm->WriteBackBlock(file_stream, offset, block.data);
-    //     file_stream.close();
-    // }
-    
     // get install path from file
     void GetInstallPath(string& install_path) 
     {
@@ -252,13 +133,6 @@ public:
         return InstallDBMS();
     }
 
-    /*
-        CREATE DATABASE base_db;
-        USE base_db
-        CREATE TABLE default_table (
-            db_names VCHAR(20)
-        );
-    */
     void CreateSystemDB()
     {   
         std::cout << "----begin Create Base DB----" << std::endl;
@@ -288,74 +162,123 @@ public:
     }
 
     /**
-     * @todo: 未完成，需要使用缓存的base_db信息
      * @brief Create a new database, for sql: CREATE DATABASE db_name;
      * @param db_name The name of the database to be created
      */
-    void CreateDB(string db_name)
-    {
-        // 1、get or create db folder and file
-        // string db_path_uri = GetAndCreateDbFolder(db_name);
-        // string db_file_uri = GetAndCreateDefaultDbFile(db_name);
+    SqlResponse* CreateDB(DB* base_db, string db_name)
+    {   
+        SqlResponse* sql_response = new SqlResponse();
 
-        // DB default_db;
-        // default_db.db_name = db_name;
-        // default_db.default_table_header_file_path = GetAndCreateDefaultTableFile(GetDefaultTablePath(db_path_uri));
-        // SerializeDBFile(default_db, db_file_uri);
+        if (CheckDBExist(base_db, db_name))
+        {
+            sql_response->sql_state = FAILURE;
+            sql_response->information = "Database " + db_name + " areadly exists";
+            return sql_response;
+        }
 
-        // // 2、insert one row in base_db.default_table, means add one db
-        // char* insert_db_name = new char[VCHAR_LENGTH];
-        // memcpy(insert_db_name, &db_name, VCHAR_LENGTH);
-        // // TODO: cache base_db
-        // // InsertIntoTable(DEFAULT_DB_FOLDER_NAME, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, insert_db_name);
+        // write "db_name" to base_db.default_table.db_names
+        char* deafult_db_name = new char[db_name.size()];
+        memcpy(deafult_db_name, db_name.c_str(), db_name.size());
+        Value* insert_value = new Value(deafult_db_name, db_name.size());
+        bool insert_result = InsertIntoTable(*base_db, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, insert_value);
+        delete[] deafult_db_name;
+        delete insert_value;
 
-        // // 3、Create default table
-        // CreateDefaultTable(db_name);
+        if (!insert_result)
+        {
+            sql_response->sql_state = FAILURE;
+            sql_response->information = "write " + db_name + " to base_db.default_table.db_names failure";
+            return sql_response;
+        }
+
+        // reload base_db
+        OpenDB(base_db, base_db);
+
+        // create db file
+        string db_folder_uri = lw->cal_url_util->GetDbFolder(db_name);
+        file_mm->OpenOrMkdir(db_folder_uri);
+        string db_file_uri = lw->cal_url_util->GetDefaultDbFile(db_name);
+        file_mm->ReadOrCreateFile(db_file_uri).close();
+
+        // write data to db file
+        DB new_db;
+        new_db.db_name = db_name;
+        new_db.db_description = "User db, named " + db_name;
+        new_db.default_table_header_file_path = lw->cal_url_util->GetTableHeaderFile(db_name);
+        SerializeDBFile(new_db, db_file_uri);
+        
+        // create table header file and default table
+        CreateDefaultTable(db_name);
+
+        sql_response->sql_state = SUCCESS;
+        return sql_response;
     }
 
-    // for sql : USE db_name CREATE TABLE table_name(column1, column2, ...)
+    // TODO
+    SqlResponse* DropDB(DB* base_db, string db_name)
+    {
+        SqlResponse* sql_response = new SqlResponse();
+        return sql_response;
+    }
+
+    /**
+     * Creates a new table in the specified database.
+     * @todo: make Update cache -> write to header file and reload db
+     * This function performs the following steps:
+     * 1. Updates the cache by adding the new table to the database's table list.
+     * 2. Creates a new table data file for the table.
+     * 3. Creates a data block for each column in the table and writes the address to the table header.
+     * 4. Inserts the table into the table header file.
+     * 
+     * @param db The database in which to create the table.
+     * @param table The table to create.
+     */
     void CreateTable(DB& db, ColumnTable table)
     {
+        // Check if the database is the base database, which cannot be modified
         if (db.db_name == DEFAULT_DB_FILE_NAME)
             throw std::runtime_error("Can not create table in base_db!");
 
-        // update cache
+        // 1. Update cache
         db.tables.push_back(table);
 
-        // create table data file
+        // 2. Create table data file
         file_mm->ReadOrCreateFile(lw->cal_url_util->GetTableDataFile(db.db_name, table.table_name)).close();   // /install/db_name/tables/data/default_table.data
         
-        // create data block for each column, and write address to table header
+        // 3. Create data block for each column and write address to table header
         for (default_amount_type i = 0; i < table.column_size; i++)
         {
             DataBlock data_block;
 
+            // Create a new data block for the column
             default_address_type new_data_block_address = lw->CreateNewBlock(db.db_name, table.columns.column_name_array[i], data_block);
             
-            // ReadOneDataBlock(data_file, new_data_block_address, data_block);
+            // Initialize the data block
             data_block.field_length = table.columns.column_length_array[i];
             data_block.field_data_nums = 0;
             data_block.next_block_pointer = 0;
 
+            // Write the data block to disk
             lw->ReleaseWritingBlock(db.db_name, table.columns.column_name_array[i], new_data_block_address, data_block);
 
-            // WriteBackDataBlock(table_header_file, block_address, data_block);
+            // Update the table header with the data block address
             table.columns.column_storage_address_array[i] = new_data_block_address;
         }
 
-        // insert into the table header file
+        // 4. Insert the table into the table header file
         TableBlock* block = new TableBlock();
         default_address_type block_offset = 0;
         lw->LoadBlockForWrite(db.db_name, DEFAULT_TABLE_NAME, block_offset, *block);
         while (!block->InsertTable(&table))
         {   
+            // If the block is full, create a new block and update the previous block's next pointer
             default_address_type cache_next_block_pointer = block->next_block_pointer;
             if (cache_next_block_pointer == 0)
             {
                 TableBlock* new_block = new TableBlock();
                 default_address_type new_block_offset = lw->CreateNewBlock(db.db_name, DEFAULT_TABLE_NAME, *new_block);
 
-                // update pre block information
+                // Update pre block information
                 block->next_block_pointer = new_block_offset;
                 lw->ReleaseWritingBlock(db.db_name, DEFAULT_TABLE_NAME, block_offset, *block);
                 delete block;
@@ -367,25 +290,34 @@ public:
                 break;
             }
 
+            // Release the current block and load the next block
             lw->ReleaseWritingBlock(db.db_name, DEFAULT_TABLE_NAME, block_offset, *block);
             lw->LoadBlockForWrite(db.db_name, DEFAULT_TABLE_NAME, cache_next_block_pointer, *block);
         }
 
+        // Release the final block
         lw->ReleaseWritingBlock(db.db_name, DEFAULT_TABLE_NAME, block_offset, *block);
         delete block;
     }
-    
-    // create a special default table for base db, this table will store all db's name.
+
+    /**
+     * Creates the default table for the base database.
+     * 
+     * This function performs the following steps:
+     * 1. Creates the default table header file and data file.
+     * 2. Writes data into the table header file, including the data address (which is 0, indicating the data is in the first block of the table data file).
+     * 3. Inserts a row into the default table with the base database name.
+     */
     void CreateDefaultTableForBaseDb()
     {
-        // 1、create default table header file
+        // 1. Create default table header file and data file
         file_mm->OpenOrMkdir(lw->cal_url_util->GetDefaultTablePath(DEFAULT_DB_FILE_NAME));  // /install/base_db/tables
         file_mm->ReadOrCreateFile(lw->cal_url_util->GetTableHeaderFile(DEFAULT_DB_FILE_NAME)).close();   // /install/db_name/tables/default_table.tvdbb
         file_mm->OpenOrMkdir(lw->cal_url_util->GetTableDataFolder(DEFAULT_DB_FILE_NAME));    // /install/db_name/tables/data
         file_mm->ReadOrCreateFile(lw->cal_url_util->GetTableDataFile(DEFAULT_DB_FILE_NAME, DEFAULT_TABLE_DATA_FILE_NAME)).close();   // /install/db_name/tables/data/default_table.data
 
-        // 2、write data into table header file (data address is 0, because the data of default table must in the first block of table data file)
-        // construct a block to read from or write to disk, construct a column_table(only has one column), and insert to block
+        // 2. Write data into table header file (data address is 0, because the data of default table must in the first block of table data file)
+        // Construct a block to read from or write to disk, construct a column_table (only has one column), and insert to block
         TableBlock block;
         default_address_type block_offset = lw->CreateNewBlock(DEFAULT_DB_FILE_NAME, DEFAULT_TABLE_NAME, block);
 
@@ -404,20 +336,31 @@ public:
         
         lw->ReleaseWritingBlock(DEFAULT_DB_FILE_NAME, DEFAULT_TABLE_NAME, block_offset, block);
 
-        // reload base db
-        DB base_db; base_db.db_name = DEFAULT_DB_FILE_NAME;
-        OpenDB(base_db);
+        // 3. Reload base db
+        DB base_db; 
+        base_db.db_name = DEFAULT_DB_FILE_NAME;
+        OpenDB(&base_db, &base_db);
         
-        // 3、USE base_db INSERT INTO default_table(db_names) VALUES ("base_db")
+        // 3. USE base_db INSERT INTO default_table(db_names) VALUES ("base_db")
         string db_name = DEFAULT_DB_FOLDER_NAME;
-        char* deafult_db_name = new char[ct.columns.column_length_array[ct.column_size - 1]];
-        strcpy(deafult_db_name, db_name.c_str());
-        InsertIntoTable(base_db, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, deafult_db_name);
+        char* deafult_db_name = new char[db_name.size()];
+        memcpy(deafult_db_name, db_name.c_str(), db_name.size());
+        Value* insert_value = new Value(deafult_db_name, db_name.size());
+        InsertIntoTable(base_db, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, insert_value);
         delete[] deafult_db_name;
-
+        delete insert_value;
     }
-
-    // this is the function is used when creating user table
+    
+    /**
+     * Creates the default table in the specified database.
+     * 
+     * This function performs the following steps:
+     * 1. Creates the default table header file.
+     * 2. Writes data into the table header file, including the data address (which is 0, indicating the data is in the first block of the table data file).
+     * 3. Creates the table data file and writes the first block of each column.
+     * 
+     * @param db_name The name of the database in which to create the default table.
+     */
     void CreateDefaultTable(string db_name)
     {
         // 1、create default table header file
@@ -448,131 +391,213 @@ public:
     }
 
     /**
-     * @brief first function, used when create connection between client and server
+     * Opens a database, either the default database or a user-defined database.
+     *
+     * @param base_db The cached base database object.
+     * @param try_open_db The database to be opened.
+     * @return True if the database is opened successfully, false otherwise.
      */
-    bool OpenDB(DB& db)
+    bool OpenDB(DB* base_db, DB* try_open_db)
     {
-        if (db.db_name == DEFAULT_DB_FILE_NAME)
+        // open base_db
+        if (try_open_db->db_name == DEFAULT_DB_FILE_NAME)
         {
-            OpenDefaultDB(db);
+            // update base_db
+            LoadTables(base_db);
             return true;
         }
 
-        // TODO: check db exist!
-        OpenUserDB(db);
+        // open user db
+        if (!CheckDBExist(base_db, try_open_db->db_name))
+        {
+            return false;
+        }
+        LoadTables(try_open_db);
         return true;
-
-        return false;
     }
 
-    // default db has only  default tables, the data of it are user db's name of this system, so here have no need to read default table's data
-    // to check one db whether exists, can cache (base db)->(default table)->(data)
-    void OpenDefaultDB(DB& db)
-    {
-        LoadTables(db);
-    }
-    
-    // all table's header are stored on default_table.tvdbb file, the data of default table now has no use.
-    void OpenUserDB(DB& db)
-    {
-        LoadTables(db);
-    }
-    
-    // 写到这里了，日志和
+    /**
+     * Checks if a database with the given name exists in the base database.
+     *
+     * @param base_db The cached base database object.
+     * @param db_name The name of the database to check for existence.
+     * @return True if the database exists, false otherwise.
+     */
     bool CheckDBExist(DB* base_db, string db_name)
     {
-        // open the default_table data file, to find whether the db_name exists
-        DataBlock block;
-        default_length_size first_block_offset;
-        // load -> use -> close
-        bool has_next = LoadFirstDataBlock(*base_db, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, first_block_offset, block);
-        
-        while(has_next)
+        // Convert the database name to a C-style string
+        char* db_name_c = new char[db_name.length()];
+        memcpy(db_name_c, db_name.c_str(), db_name.length());
+        delete[] db_name_c; // Note: this line is unnecessary, as the memory is immediately freed
+
+        // Create a Value object to represent the database name
+        Value* eq_value = new Value(db_name_c, db_name.length());
+
+        // Create a vector to store the result values
+        vector<value_tag> result_values;
+
+        // Filter the base database to find values equal to the database name
+        FilterEqual(base_db, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, eq_value, result_values);
+
+        // Delete the Value object
+        delete eq_value;
+
+        // Check if any results were found
+        if (result_values.size() > 0)
         {
-
+            // If results were found, the database exists
+            return true;
         }
-
+        // If no results were found, the database does not exist
         return false;
     }
-
-    // 
-    void FilterEqual(DataBlock* block, char* value, char* result_value)
+    
+    /**
+     * Filters the data in a column of a table to find values that are equal to a given value.
+     * @todo now have not use the log!
+     * @param db The database to search in.
+     * @param table_name The name of the table to search in.
+     * @param col_name The name of the column to search in.
+     * @param eq_value The value to compare with.
+     * @param result_values The vector to store the result values.
+     */
+    void FilterEqual(DB* db, string table_name, string col_name, Value* eq_value, vector<value_tag>& result_values)
     {
+        // Initialize the tag offset to 0
+        default_long_int tag_offset = 0;
 
+        // Clear the result values vector
+        result_values.clear();
+
+        // Declare variables to store the column table and column data block offset
+        ColumnTable* table;
+        default_address_type column_data_block_offset;
+
+        // Declare a DataBlock object to store the data block
+        DataBlock block;
+
+        // Load the first data block of the column
+        bool has_next = LoadFirstDataBlock(*db, table_name, col_name, column_data_block_offset, block);
+
+        // Store the offset of the next data block
+        default_address_type cache_next_block_offset = block.next_block_pointer;
+
+        // Filter the data block to find values equal to the given value
+        FilterEqualOp(&block, eq_value, result_values, tag_offset);
+
+        // Release the reading block
+        lw->ReleaseReadingBlock(db->db_name, table_name, column_data_block_offset, block);
+
+        // Loop until there are no more data blocks
+        while(has_next)
+        {
+            // Load the next data block
+            has_next = LoadDataBlocks(*db, table_name, cache_next_block_offset, block);
+
+            // Store the offset of the next data block
+            cache_next_block_offset = block.next_block_pointer;
+
+            // Filter the data block to find values equal to the given value
+            FilterEqualOp(&block, eq_value, result_values, tag_offset);
+
+            // Release the reading block
+            lw->ReleaseReadingBlock(db->db_name, table_name, column_data_block_offset, block);
+        }
+    }
+
+    /**
+     * Filters the data block to find values that are equal to the given value.
+     *
+     * @param block The data block to filter.
+     * @param equal_val The value to compare with.
+     * @param result_values The vector to store the result values.
+     * @param tag_offset The offset of the tag in the result values.
+     */
+    void FilterEqualOp(DataBlock* block, Value* equal_val, vector<value_tag>& result_values, default_long_int& tag_offset)
+    {
+        // Get the number of values in the data block
+        default_length_size value_nums = block->field_data_nums;
+
+        // Get the length of the value type
+        default_length_size value_length = GetValueTypeLength(equal_val->value_type);
+
+        // Calculate the offset of the value in the data block
+        default_address_type value_offset = BLOCK_SIZE - value_length;
+
+        // Loop through each value in the data block
+        while (value_nums > 0)
+        {
+            // Deserialize the value from the data block
+            Value* new_val = SerializeValueFromBuffer(equal_val->value_type, block->data, value_offset);
+
+            // Compare the deserialized value with the given value
+            if (Compare(equal_val, new_val) == 0)
+            {
+                // If they are equal, create a new value tag pair and add it to the result values
+                value_tag new_val_tag_pair(tag_offset, *new_val);
+                result_values.push_back(new_val_tag_pair);
+            }
+            else
+            {
+                // If no use, free memory
+                delete new_val;
+            }
+
+            // Decrement the value count and increment the tag offset
+            value_nums--;
+            tag_offset++;
+        }
     }
 
     // read table headers stored in default_table.tvdbb
-    void LoadTables(DB& db)
+    void LoadTables(DB* db)
     {
         // open db file, like "db.tvbb", and deserialize to get default table name
-        string db_file_name = lw->cal_url_util->GetDefaultDbFile(db.db_name);
-        DeserializeDBFile(db, db_file_name);
+        string db_file_name = lw->cal_url_util->GetDefaultDbFile(db->db_name);
+        DeserializeDBFile(*db, db_file_name);
 
         // get one slot on memory and load data from disk
         TableBlock block;
-        lw->LoadBlockForRead(db.db_name, DEFAULT_TABLE_NAME, 0, block);
+        lw->LoadBlockForRead(db->db_name, DEFAULT_TABLE_NAME, 0, block);
 
         // deserialize the tables in tables block and cache
         for (default_amount_type i = 0; i < block.table_amount; i++)
         {
             ColumnTable table;
             table.Deserialize(block.data, block.tables_begin_address[i]);
-            db.tables.push_back(table);
+            db->tables.push_back(table);
         }
 
-        lw->ReleaseReadingBlock(db.db_name, DEFAULT_TABLE_NAME, 0, block);
+        lw->ReleaseReadingBlock(db->db_name, DEFAULT_TABLE_NAME, 0, block);
 
         // serialize next block, if exists
         while (block.next_block_pointer != 0x0)
         {
             // read next block
-            lw->LoadBlockForRead(db.db_name, DEFAULT_TABLE_NAME, block.next_block_pointer, block);
+            lw->LoadBlockForRead(db->db_name, DEFAULT_TABLE_NAME, block.next_block_pointer, block);
             // deserialize the tables in tables block and cache
             for (default_amount_type i = 0; i < block.table_amount; i++)
             {
                 ColumnTable* table = new ColumnTable();
                 table->Deserialize(block.data, block.tables_begin_address[i]);
-                db.tables.push_back(*table);
+                db->tables.push_back(*table);
             }
-            lw->ReleaseReadingBlock(db.db_name, DEFAULT_TABLE_NAME, block.next_block_pointer, block);
+            lw->ReleaseReadingBlock(db->db_name, DEFAULT_TABLE_NAME, block.next_block_pointer, block);
         }
     }
     
     // return: have next block
-    bool LoadFirstDataBlock(DB db, string table_name, string col_name, default_length_size& first_block_offset, DataBlock& block)
+    bool LoadFirstDataBlock(DB& db, string table_name, string col_name, default_length_size& first_block_offset, DataBlock& block)
     {
         ColumnTable* table = nullptr;
-
-        // check table exist in db
-        for (auto& item: db.tables)
+        default_address_type column_offset;
+        if (!GetColumn(db, table_name, col_name, table, column_offset))
         {
-            if (item.table_name == table_name)
-            {
-                table = &item;
-            }
-        }
-        if (table == nullptr)
-        {
-            throw std::runtime_error("DB has no table named " + table_name);
-        }
-            
-        // check column exists
-        default_length_size column_offset = 0;
-        while (column_offset < table->column_size)
-        {
-            if (table->columns.column_name_array[column_offset] == col_name)
-            {
-                first_block_offset = table->columns.column_storage_address_array[column_offset];
-                break;
-            }
-            column_offset++;
-        }
-        if (column_offset >= table->column_size)
-        {
-            throw std::runtime_error("table has no column named " + col_name);
+            throw std::runtime_error("DB has no table named " + table_name + " or col named " + col_name);
         }
 
         // read the first data block of the column
+        first_block_offset = table->columns.column_storage_address_array[column_offset];
         lw->LoadBlockForRead(db.db_name, table_name, first_block_offset, block);
         
         // TODO: close block!
@@ -582,18 +607,15 @@ public:
     }
 
     // return: have next block
-    bool LoadDataBlocks(DB db, string table_name, DataBlock& block)
+    bool LoadDataBlocks(DB db, string table_name, default_length_size block_address, DataBlock& block)
     {
-        // cache next block address
-        default_address_type next_block_address = block.next_block_pointer;
-
-        if (next_block_address == 0x0)
+        if (block_address == 0x0)
         {
             throw std::runtime_error("Can not load next block, because its null");
         }
 
         // read the next block
-        lw->LoadBlockForRead(db.db_name, table_name, next_block_address, block);
+        lw->LoadBlockForRead(db.db_name, table_name, block_address, block);
 
         // TODO: close block!
 
@@ -601,79 +623,121 @@ public:
         return block.next_block_pointer == 0x0;
     }
 
-    // mainly used when insert data to default table of base db, because the default table of base db will store all db names but not 
-    void InsertIntoTableWithoutCheck(string db_name, string table_name, string column_name, char* data)
-    {
-        
-    }
-
-    void InitTableData(DB& db, string table_name, string column_name)
-    {
-        
-    }
-
-    void InsertIntoTable(DB& db, string table_name, string column_name, char* data)
+    bool InsertIntoTable(DB& db, string table_name, string column_name, Value* insert_value)
     {   
         // check table and column exists.
         ColumnTable* table = nullptr;
+        default_address_type column_offset;
+
+        if (!GetColumn(db, table_name, column_name, table, column_offset))
+        {
+            return false;
+            // throw std::runtime_error("DB has no table named " + table_name + " or col named " + column_name);
+        }
+
+        // check value type
+        if (insert_value->value_type != table->columns.column_type_array[column_offset])
+        {
+            return false;
+        }
+        default_length_size data_size = insert_value->GetValueLength();
+        char* value_c = new char[data_size];
+        insert_value->Serialize(value_c, 0);
+
+        // open a data block
+        DataBlock* data_block = new DataBlock();
+        default_address_type read_offset = table->columns.column_storage_address_array[column_offset];
+        lw->LoadBlockForWrite(db.db_name, table->table_name, read_offset, *data_block);
+
+        // get the last block
+        while (data_block->next_block_pointer != 0x0)
+        {   
+            // cache the next block offset
+            default_address_type cached_next_block_offset = data_block->next_block_pointer;
+
+            // release the using block
+            lw->ReleaseWritingBlock(db.db_name, table->table_name, read_offset, *data_block);
+
+            // open the next block
+            read_offset = cached_next_block_offset;
+            lw->LoadBlockForWrite(db.db_name, table->table_name, read_offset, *data_block);
+        }
+        // check space
+        if (!data_block->HaveSpace(data_size))
+        {
+            // create one new block
+            DataBlock* new_data_block = new DataBlock();
+            default_address_type new_block_offset = lw->CreateNewBlock(db.db_name, column_name, *new_data_block);
+
+            // update the last block
+            data_block->next_block_pointer = new_block_offset;
+            lw->ReleaseWritingBlock(db.db_name, table->table_name, read_offset, *data_block);
+            delete data_block;
+            data_block = new_data_block;
+            read_offset = new_block_offset;
+        }
+
+        // insert data
+        data_block->InsertData(value_c, data_size);
+
+        // write back
+        lw->ReleaseWritingBlock(db.db_name, table->table_name, read_offset, *data_block);
+
+        return true;
+    }
+
+    /**
+     * Retrieves a column from a table in the database.
+     *
+     * @param db The database to search in.
+     * @param table_name The name of the table to search in.
+     * @param column_name The name of the column to retrieve.
+     * @param table A pointer to the ColumnTable object that will be populated with the retrieved column.
+     * @param column_offset The offset of the column in the table.
+     *
+     * @return True if the column is found, false otherwise.
+     */
+    bool GetColumn(DB& db, string table_name, string column_name, ColumnTable*& table, default_address_type& column_offset)
+    {
+        // Check if the table exists in the database
+        table = nullptr;
         for (default_length_size i = 0; i < db.tables.size(); i++)
         {
+            // Compare the table name with the given table name
             if (db.tables[i].table_name == table_name)
             {
+                // If a match is found, set the table pointer and break the loop
                 table = &db.tables[i];
                 break;
             }
         }
-
+        // If the table is not found, return false
         if (table == nullptr)
         {
-            throw std::runtime_error("Can not find " + table_name + " on table: " + db.db_name);
+            return false;
         }
 
-        default_amount_type column_offset = 0;
+        // Initialize the column offset to 0
+        column_offset = 0;
+        // Iterate through the columns in the table
         for(default_amount_type i = 0; i < table->column_size; i++)
         {
+            // Compare the column name with the given column name
             if (table->columns.column_name_array[i] == column_name)
             {
+                // If a match is found, set the column offset and break the loop
                 column_offset = i;
                 break;
             }
         }
-
+        // If the column is not found, return false
         if (column_offset >= table->column_size)
         {
-            throw std::runtime_error("column: " + column_name + "not exists in table: " + table_name);
+            return false;
         }
 
-        // open a data block
-        DataBlock data_block;
-        default_address_type read_offset = table->columns.column_storage_address_array[column_offset];
-        lw->LoadBlockForWrite(db.db_name, table->table_name, read_offset, data_block);
-
-        // get one data block has space
-        while (!data_block.HaveSpace())
-        {   
-            // get next block offset
-            default_address_type cached_next_block_offset = data_block.next_block_pointer;
-
-            // release the using block
-            lw->LoadBlockForWrite(db.db_name, table->table_name, read_offset, data_block);
-            read_offset = cached_next_block_offset;
-
-            // if has no next block, then create one new block to store
-            if (read_offset == 0x0)
-            {
-                read_offset = lw->CreateNewBlock(db.db_name, column_name, data_block);
-            }
-        }
-
-        // insert data
-        data_block.field_length = table->columns.column_length_array[column_offset];
-        data_block.next_block_pointer = 0x0;    // must insert at last block, so set it's next_block_pointer as 0
-        data_block.InsertData(data);
-
-        // write back
-        lw->ReleaseWritingBlock(db.db_name, table->table_name, read_offset, data_block);
+        // If the column is found, return true
+        return true;
     }
 
     void DeleteRecord()

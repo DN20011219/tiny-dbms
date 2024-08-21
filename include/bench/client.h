@@ -151,7 +151,7 @@ public:
 
             if (command == "root")
             {
-                BuildDefaultClient();
+                BuildRootClient();
                 continue;
             }
 
@@ -163,10 +163,17 @@ public:
         }
     }
 
-    void BuildDefaultClient()
+    void BuildRootClient()
     {
         Client* cli = new Client();
         cli->RunClient("192.0.0.0", 0, 0, "base_db", queue_list_range[used_queue_id++]);
+        delete cli;
+    }
+
+    void BuildDefaultUserClient()
+    {
+        Client* cli = new Client();
+        cli->RunClient("192.0.0.0", 0, 0, "first_db", queue_list_range[used_queue_id++]);
         delete cli;
     }
 

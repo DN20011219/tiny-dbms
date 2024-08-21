@@ -8,8 +8,8 @@
 // If it's a number, string_value will be unusefull. If it's a vchar, 
 // the num_value will store the char length.
 
-#ifndef VDBMS_META_COLUMN_VALUE_H_
-#define VDBMS_META_COLUMN_VALUE_H_
+#ifndef VDBMS_META_VALUE_H_
+#define VDBMS_META_VALUE_H_
 
 #include <string>
 
@@ -24,43 +24,8 @@ enum ValueType {
     FLOAT_T,
     VCHAR_T,
 
-    RAW_VALUE,  // used when value is read from sql and not get it's type from stored table file
+    RAW_VALUE  // used when value is read from sql and not get it's type from stored table file
 };
-
-ValueType GetValueTypeFromStr(string value_str)
-{
-    if (value_str == "INT")
-    {
-        return INT_T;
-    }
-    if (value_str == "FLOAT")
-    {
-        return FLOAT_T;
-    }
-        if (value_str == "VCHAR")
-    {
-        return VCHAR_T;
-    }
-
-    throw std::runtime_error("can not parse value type: " + value_str);
-}
-
-default_length_size GetValueTypeLength(ValueType type)
-{
-    switch (type)
-    {
-    case INT_T:
-        return sizeof(int);
-    case FLOAT_T:
-        return sizeof(float);
-    case VCHAR_T:
-        return 50;
-    case RAW_VALUE:
-        return sizeof(int);
-    default:
-        throw std::runtime_error("Can not get value length");
-    }
-}
 
 class Value
 {
@@ -69,6 +34,49 @@ public:
 
     string raw_value;
 
+    // copy constructor
+    Value(const Value& other) : value_type(other.value_type) {
+        if (other.string_value != nullptr) {
+            string_value = new char[other.num_value.int_value];
+            memcpy(string_value, other.string_value, other.num_value.int_value);
+        } else {
+            string_value = nullptr;
+        }
+
+        num_value = other.num_value;
+        raw_value = other.raw_value;
+    }
+
+    Value(Value&& other) : value_type(other.value_type) {
+        string_value = other.string_value;
+        other.string_value = nullptr;
+
+        num_value = other.num_value;
+        raw_value = std::move(other.raw_value);
+    }
+    
+    Value& operator=(const Value& other) {
+        if (this != &other) {
+            if (string_value != nullptr) {
+                delete[] string_value;
+            }
+
+            value_type = other.value_type;
+
+            if (other.string_value != nullptr) {
+                string_value = new char[other.num_value.int_value];
+                memcpy(string_value, other.string_value, other.num_value.int_value);
+            } else {
+                string_value = nullptr;
+            }
+
+            num_value = other.num_value;
+            raw_value = other.raw_value;
+        }
+
+        return *this;
+    }
+    
     ~Value()
     {
         if (string_value != nullptr)
@@ -216,6 +224,10 @@ public:
             
             return;
         }
+        else if (value_type == ValueType::RAW_VALUE)
+        {
+            throw std::runtime_error("Raw value can not be Serialize to buffer");
+        }
         else
         {
             memcpy(data + offset, &num_value, sizeof(num_value));
@@ -245,63 +257,155 @@ public:
         return raw_value;
     }
 
-private:
+    default_length_size GetValueLength()
+    {
+        if (value_type == ValueType::VCHAR_T)
+        {
+            return sizeof(num_value) + num_value.int_value;
+        }
+        else if (value_type == ValueType::RAW_VALUE)
+        {
+            return raw_value.length();
+        }
+        else
+        {
+            return sizeof(num_value);
+        }
+    }
+
+public:
     ValueType value_type;
     union {
         int int_value;
         float float_value;
     } num_value;
     char* string_value;
-
-    friend class ValueComparer;
 };
 
 
-class ValueComparer
+int Compare(Value* a, Value* b)
 {
-    
-public:
-    static int Compare(Value a, Value b)
+    if (a->value_type == b->value_type)
     {
-        if (a.value_type == b.value_type)
+        switch (a->value_type)
         {
-            switch (a.value_type)
-            {
             case ValueType::INT_T:
-                return a.num_value.int_value - b.num_value.int_value;
+                return a->num_value.int_value - b->num_value.int_value;
             case ValueType::FLOAT_T:
-                return (a.num_value.float_value > b.num_value.float_value) - (a.num_value.float_value < b.num_value.float_value);
+                return (a->num_value.float_value > b->num_value.float_value) - (a->num_value.float_value < b->num_value.float_value);
             case ValueType::VCHAR_T:
-                return strcmp(a.string_value, b.string_value);
+                return strcmp(a->string_value, b->string_value);
             default:
                 throw std::runtime_error("not support data type");
-            }
-        }
-        else if ((a.value_type == ValueType::INT_T && b.value_type == ValueType::FLOAT_T) ||
-                 (a.value_type == ValueType::FLOAT_T && b.value_type == ValueType::INT_T))
-        {
-            float aValue = (a.value_type == ValueType::INT_T) ? a.num_value.int_value : a.num_value.float_value;
-            float bValue = (b.value_type == ValueType::INT_T) ? b.num_value.int_value : b.num_value.float_value;
-            return (aValue > bValue) - (aValue < bValue);
-        }
-        else if ((a.value_type == ValueType::INT_T || a.value_type == ValueType::FLOAT_T) && b.value_type == ValueType::VCHAR_T)
-        {
-            float bValue = std::stof(b.string_value);
-            float aValue = (a.value_type == ValueType::INT_T) ? a.num_value.int_value : a.num_value.float_value;
-            return (aValue > bValue) - (aValue < bValue);
-        }
-        else if (a.value_type == ValueType::VCHAR_T && (b.value_type == ValueType::INT_T || b.value_type == ValueType::FLOAT_T))
-        {
-            float aValue = std::stof(a.string_value);
-            float bValue = (b.value_type == ValueType::INT_T) ? b.num_value.int_value : b.num_value.float_value;
-            return (aValue > bValue) - (aValue < bValue);
-        }
-        else
-        {
-            throw std::runtime_error("not support data type");
         }
     }
-};
+    else if ((a->value_type == ValueType::INT_T && b->value_type == ValueType::FLOAT_T) ||
+        (a->value_type == ValueType::FLOAT_T && b->value_type == ValueType::INT_T))
+    {
+        float aValue = (a->value_type == ValueType::INT_T) ? a->num_value.int_value : a->num_value.float_value;
+        float bValue = (b->value_type == ValueType::INT_T) ? b->num_value.int_value : b->num_value.float_value;
+        return (aValue > bValue) - (aValue < bValue);
+    }
+    else if ((a->value_type == ValueType::INT_T || a->value_type == ValueType::FLOAT_T) && b->value_type == ValueType::VCHAR_T)
+    {
+        float bValue = std::stof(b->string_value);
+        float aValue = (a->value_type == ValueType::INT_T) ? a->num_value.int_value : a->num_value.float_value;
+        return (aValue > bValue) - (aValue < bValue);
+    }
+    else if (a->value_type == ValueType::VCHAR_T && (b->value_type == ValueType::INT_T || b->value_type == ValueType::FLOAT_T))
+    {
+        float aValue = std::stof(a->string_value);
+        float bValue = (b->value_type == ValueType::INT_T) ? b->num_value.int_value : b->num_value.float_value;
+        return (aValue > bValue) - (aValue < bValue);
+    }
+    else
+    {
+        throw std::runtime_error("not support data type");
+    }
+}
+
+ValueType GetValueTypeFromStr(string value_str)
+{
+    if (value_str == "INT")
+    {
+        return INT_T;
+    }
+    if (value_str == "FLOAT")
+    {
+        return FLOAT_T;
+    }
+        if (value_str == "VCHAR")
+    {
+        return VCHAR_T;
+    }
+
+    throw std::runtime_error("can not parse value type: " + value_str);
+}
+
+default_length_size GetValueTypeLength(ValueType type)
+{
+    switch (type)
+    {
+        case INT_T:
+            return INT_LENGTH;
+        case FLOAT_T:
+            return FLOAT_LENGTH;
+        case VCHAR_T:
+            return VCHAR_LENGTH;
+        case RAW_VALUE:
+            return RAW_LENGTH;
+        default:
+            throw std::runtime_error("Can not get value length");
+    }
+}
+
+Value* SerializeValueFromBuffer(ValueType type, char* buffer, default_address_type& offset)
+{
+    Value* value;
+
+    switch (type)
+    {
+        case INT_T:
+        {
+            int val_int;
+            memcpy(&val_int, buffer + offset, INT_LENGTH);
+            value = new Value(val_int);
+            offset -= INT_LENGTH;
+            break;
+        }
+        case FLOAT_T:
+        {
+            float val_float;
+            memcpy(&val_float, buffer + offset, FLOAT_LENGTH);
+            value = new Value(val_float);
+            offset -= FLOAT_LENGTH;
+            break;
+        }
+        case VCHAR_T:
+        {
+            int str_length;
+            memcpy(&str_length, buffer + offset, sizeof(int));
+            char* val_c = new char[str_length];
+            memcpy(val_c, buffer + offset + sizeof(int), str_length);
+            value = new Value(val_c, str_length);
+            offset -= sizeof(int) + str_length;
+            delete[] val_c;
+            break;
+        }
+        case RAW_VALUE:
+        {
+            char* raw_val_c = new char[RAW_LENGTH];
+            memcpy(raw_val_c, buffer + offset, RAW_LENGTH);
+            string raw_val_str(raw_val_c);
+            value = new Value(raw_val_str);
+            offset -= RAW_LENGTH;
+            delete[] raw_val_c;
+            break;
+        }
+    }
+
+    return value;
+}
 
 }
-#endif // VDBMS_META_COLUMN_VALUE_H_
+#endif // VDBMS_META_VALUE_H_
