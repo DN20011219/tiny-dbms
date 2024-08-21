@@ -94,7 +94,7 @@ Comparator SwitchComparator(string value)
         throw std::runtime_error("value: " + value + " can not be parsed to Comparator");
     }
 }
-struct Compare  // such as a = b, a != b, a > b, a < b
+struct CompareCondition  // such as a = b, a != b, a > b, a < b
 {
     Column col;
     Comparator condition;
@@ -123,10 +123,10 @@ OperatorEnum SwitchOperator(string value)
 }
 struct Operation
 {
-    Compare left_leaf;
+    CompareCondition left_leaf;
     Operation* left_op;
     OperatorEnum opreator;
-    Compare right_leaf;
+    CompareCondition right_leaf;
 };
 
 // sql struct 
@@ -270,7 +270,7 @@ public:
     string table_name;
     vector<Column> columns;
     // map<string, Column*> column_map;
-    vector<Compare> compare_vector;
+    vector<CompareCondition> compare_vector;
     vector<Operation> operation_vector;
 
 public:
@@ -324,7 +324,7 @@ public:
         token_flag++;
 
         // try get where condition
-        Compare* pre_compare = nullptr;
+        CompareCondition* pre_compare = nullptr;
         Operation* pre_op = nullptr;
         while(token_flag < tokens.size())
         {
@@ -350,13 +350,13 @@ public:
                     && (tokens[token_flag + 3].type == NUMBER_T || tokens[token_flag + 3].type == STRING_T)
                     ) 
                 {
-                    // buil Compare
-                    Compare new_compare;
+                    // buil CompareCondition
+                    CompareCondition new_compare;
                     Column compare_column; compare_column.col_name = tokens[token_flag + 1].value;
                     new_compare.col = std::move(compare_column);
                     new_compare.condition = SwitchComparator(tokens[token_flag + 2].value);
                     new_compare.compare_value = tokens[token_flag + 3].value;
-                    // store Compare
+                    // store CompareCondition
                     compare_vector.push_back(std::move(new_compare));
 
                     // buil Operation
@@ -390,13 +390,13 @@ public:
                     && (tokens[token_flag + 4].type == NUMBER_T || tokens[token_flag + 4].type == STRING_T))
                 {
                     
-                    // buil Compare
-                    Compare new_compare;
+                    // buil CompareCondition
+                    CompareCondition new_compare;
                     Column compare_column; compare_column.col_name = tokens[token_flag + 1].value;
                     new_compare.col = std::move(compare_column);
                     new_compare.condition = SwitchComparator(tokens[token_flag + 2].value + tokens[token_flag + 3].value);
                     new_compare.compare_value = tokens[token_flag + 3].value;
-                    // store Compare
+                    // store CompareCondition
                     compare_vector.push_back(std::move(new_compare));
 
                     // buil Operation
@@ -434,14 +434,14 @@ public:
                 && (tokens[token_flag + 3].type == NUMBER_T || tokens[token_flag + 3].type == STRING_T)
                 ) 
             {
-                // build Compare
-                Compare new_compare;
+                // build CompareCondition
+                CompareCondition new_compare;
                 Column compare_column; compare_column.col_name = tokens[token_flag + 1].value;
                 new_compare.col = std::move(compare_column);
                 new_compare.condition = SwitchComparator(tokens[token_flag + 2].value);
                 new_compare.compare_value = tokens[token_flag + 3].value;
 
-                // store Compare
+                // store CompareCondition
                 compare_vector.push_back(std::move(new_compare));
                 // cache new_compare to pre_compare 
                 pre_compare = &new_compare;

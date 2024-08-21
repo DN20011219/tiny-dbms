@@ -47,6 +47,10 @@ typedef struct ConnectMsg{
         // set connect state
         memcpy(msg.msg_data + result_offset, &connect_result->connect_state, sizeof(bool));
         result_offset += sizeof(bool);
+        if (!connect_result->connect_state)
+        {
+            return;
+        }
 
         // set table_amount
         int table_amount = connect_result->cached_db->tables.size();
@@ -79,6 +83,10 @@ typedef struct ConnectMsg{
         memcpy(&state, msg.msg_data + result_offset, sizeof(bool));
         result_offset += sizeof(bool);
         connect_result += "Connect State: " + std::to_string(state) + "\n";
+        if (!state)
+        {
+            return connect_result;
+        }
 
         // get table_amount
         int table_amount;
@@ -106,7 +114,7 @@ typedef struct ConnectMsg{
 
 typedef struct WorkMsg{
     long msg_type;
-    char msg_data[WORK_MSG_DATA_LENGTH]; // sql_length[4]: 16 | sql[196]: select * from a;
+    char msg_data[WORK_MSG_DATA_LENGTH]; // sql_length[4]: 16 | sql[1996]: select * from a;
 
     void DeserializeCreateDropDBMessage(bool& is_create, string& db_name) {
         // check command type

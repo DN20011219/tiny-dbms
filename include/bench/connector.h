@@ -58,15 +58,16 @@ private:
     long msg_queue_id; string connect_ip; int connect_port; UserIdentity connect_identity; string connect_db_name; 
     Session* connect_result;
 
-    // use to connect
-    Operator* open_db_operator;
+    // here use op to open db
+    Operator* db_operator;
+
 public:
 
     Connector(map<Session*, Worker*>& workers, Operator* op)
     {
         working = true;
         worker_map = workers;
-        open_db_operator = op;
+        db_operator = op;
     }
 
     ~Connector()
@@ -98,20 +99,12 @@ public:
         {
             // create one unique worker thread which can send db_msg to db_worker_thread
             CreateNewRootSession(new_session, ip, port);
-
-            // add session to cache
-            sessions.push_back(new_session);
-            session_map[ip + std::to_string(port)] = new_session;
-            
-            return new_session;
         }
-
-        CreateNewSession(new_session, ip, port, identity, db_name);
-        
-        // add session to cache
-        sessions.push_back(new_session);
-        session_map[ip + std::to_string(port)] = new_session;
-
+        else
+        {
+            // create user worker and session
+            CreateNewSession(new_session, ip, port, identity, db_name);
+        }
         return new_session;
     } 
 
@@ -120,7 +113,7 @@ public:
     {
         Session* new_session;
         new_session = new Session();
-        new_session->msg_queue_id = 0;
+        new_session->msg_queue_id = BASE_DB_WORKER_RECEIVE_QUEUE_ID;
         new_session->client_ip = "0.0.0.0";
         new_session->client_port = 0;
         new_session->connect_db_name = DEFAULT_DB_FOLDER_NAME;
@@ -128,13 +121,13 @@ public:
 
         new_session->cached_db = new DB();
         new_session->cached_db->db_name = DEFAULT_DB_FOLDER_NAME;
-        open_db_operator->OpenDB(*new_session->cached_db);
+        db_operator->OpenDB(new_session->cached_db, new_session->cached_db);
 
         sessions.push_back(new_session);
         session_map[DEFAULT_DB_FOLDER_NAME] = new_session;
 
         std::thread new_worker_thread([this, new_session]{
-            this->worker_map[new_session] = new Worker(new_session);
+            this->worker_map[new_session] = new Worker(new_session, this->db_operator, new_session->cached_db);
             cout << "DB Worker: " << new_session->cached_db->db_name << " run successfully on: " << std::this_thread::get_id() << std::endl;
             this->worker_map[new_session]->BaseDBListenThread();
             });
@@ -163,7 +156,7 @@ public:
 
         // create new worker, start the worker thread.
         std::thread new_worker_thread([this, new_session]{
-            this->worker_map[new_session] = new Worker(new_session);
+            this->worker_map[new_session] = new Worker(new_session, this->db_operator, session_map[DEFAULT_DB_FOLDER_NAME]->cached_db);
             cout << "Worker: " << new_session->cached_db->db_name << " run successfully on: " << std::this_thread::get_id() << std::endl;
             this->worker_map[new_session]->RootIdentityListenThread();
             });
@@ -180,13 +173,13 @@ public:
         new_session->connect_db_name = db_name;
         new_session->connector_identity = identity;
         
-        // open db file, and cache information storaged in disk about the db and tables
-        // check db exist
-        session_map[DEFAULT_DB_FOLDER_NAME]->cached_db->tables;
         // open db
         new_session->cached_db = new DB();
         new_session->cached_db->db_name = db_name;
-        open_db_operator->OpenDB(*new_session->cached_db);
+        if (!db_operator->OpenDB(session_map[DEFAULT_DB_FOLDER_NAME]->cached_db, new_session->cached_db))
+        {
+            new_session->connect_state = false;
+        }
         
         // store session
         sessions.push_back(new_session);
@@ -197,7 +190,7 @@ public:
 
         // create new worker, start the worker thread.
         std::thread new_worker_thread([this, new_session]{
-            this->worker_map[new_session] = new Worker(new_session);
+            this->worker_map[new_session] = new Worker(new_session, this->db_operator, session_map[DEFAULT_DB_FOLDER_NAME]->cached_db);
             cout << "Worker: " << new_session->cached_db->db_name << " run successfully on: " << std::this_thread::get_id() << std::endl;
             this->worker_map[new_session]->ListenThread();
             });
@@ -276,6 +269,7 @@ public:
             msg.msg_type = special_queue_id + 1; // send back use send_back_queue_id + 1, because this queue has been used to receive information msg sent by client
             msgsnd(connector_msg_key, &msg, MSG_DATA_LENGTH, 0);
                 
+            delete[] connect_result;
             connect_result = nullptr;
         }   
     }
