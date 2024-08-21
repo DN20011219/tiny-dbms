@@ -74,6 +74,13 @@ public:
         delete[] tables_begin_address;
     }
     
+    void InitBlock()
+    {
+        table_amount = 0;
+        CalAndUpdateFreeSpace();
+        next_block_pointer = 0x0;
+    }
+
     void CalAndUpdateFreeSpace()
     {
         free_space = BLOCK_SIZE - sizeof(default_amount_type) - sizeof(default_length_size) - sizeof(default_address_type);

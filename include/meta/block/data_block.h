@@ -62,6 +62,14 @@ public:
     {
     }
 
+    void InitBlock(default_length_size value_length)
+    {
+        field_length = value_length;
+        field_data_nums = 0;
+        last_record_start_address = BLOCK_SIZE;
+        next_block_pointer = 0x0;
+    }
+
     // return true if the address is ok
     // return false when there has no space to contain the data in this block
     bool CalBeginAddress(default_address_type& address, default_length_size data_size)
@@ -190,7 +198,7 @@ public:
 
     bool HaveSpace(default_length_size value_length)
     {
-        if (BLOCK_SIZE - GetSpaceCost() > value_length)
+        if ((BLOCK_SIZE - GetSpaceCost()) > value_length)
         {
             return true;
         }
