@@ -140,7 +140,6 @@ public:
 
         std::cout << "----begin init default table----" << std::endl;
         CreateDefaultTableForBaseDb();
-
     }
     
     // create base db of this system, it will store all db names. so you can search db using it.
@@ -320,20 +319,20 @@ public:
         // Construct a block to read from or write to disk, construct a column_table (only has one column), and insert to block
         TableBlock block;
         default_address_type block_offset = lw->CreateNewBlock(DEFAULT_DB_FILE_NAME, DEFAULT_TABLE_NAME, block);
+        block.InitBlock();
+
+        DataBlock data_block;
+        default_address_type data_block_offset = lw->CreateNewBlock(DEFAULT_DB_FILE_NAME, DEFAULT_TABLE_NAME, data_block);
+        data_block.InitBlock(GetValueTypeLength(ValueType::VCHAR_T));
 
         ColumnTable ct;
         ct.table_name = DEFAULT_TABLE_NAME;
         ct.table_type = COMMON;
-
-        DataBlock data_block;
-        default_address_type data_block_offset = lw->CreateNewBlock(DEFAULT_DB_FILE_NAME, DEFAULT_TABLE_NAME, data_block);
         ct.InsertColumn(DEFAULT_TABLE_COLUMN_NAME_ONE, VCHAR_T, GetValueTypeLength(ValueType::VCHAR_T), NONE, data_block_offset);
-        data_block.field_length = GetValueTypeLength(ValueType::VCHAR_T);
-        data_block.field_data_nums = 0;
 
         block.InsertTable(&ct);
+
         lw->ReleaseWritingBlock(DEFAULT_DB_FILE_NAME, DEFAULT_TABLE_NAME, data_block_offset, data_block);
-        
         lw->ReleaseWritingBlock(DEFAULT_DB_FILE_NAME, DEFAULT_TABLE_NAME, block_offset, block);
 
         // 3. Reload base db
@@ -603,7 +602,7 @@ public:
         // TODO: close block!
 
         // return has next block
-        return block.next_block_pointer == 0x0;
+        return block.next_block_pointer != 0x0;
     }
 
     // return: have next block
@@ -620,7 +619,7 @@ public:
         // TODO: close block!
 
         // return has next block
-        return block.next_block_pointer == 0x0;
+        return block.next_block_pointer != 0x0;
     }
 
     bool InsertIntoTable(DB& db, string table_name, string column_name, Value* insert_value)
@@ -667,7 +666,7 @@ public:
         {
             // create one new block
             DataBlock* new_data_block = new DataBlock();
-            default_address_type new_block_offset = lw->CreateNewBlock(db.db_name, column_name, *new_data_block);
+            default_address_type new_block_offset = lw->CreateNewBlock(db.db_name, table_name, *new_data_block);
 
             // update the last block
             data_block->next_block_pointer = new_block_offset;
