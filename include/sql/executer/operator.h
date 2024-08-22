@@ -213,7 +213,10 @@ public:
         return sql_response;
     }
 
-    // TODO
+    /**
+     * @todo this function has not been implemented
+     *
+     */
     SqlResponse* DropDB(DB* base_db, string db_name)
     {
         SqlResponse* sql_response = new SqlResponse();
@@ -311,9 +314,9 @@ public:
     {
         // 1. Create default table header file and data file
         file_mm->OpenOrMkdir(lw->cal_url_util->GetDefaultTablePath(DEFAULT_DB_FILE_NAME));  // /install/base_db/tables
-        file_mm->ReadOrCreateFile(lw->cal_url_util->GetTableHeaderFile(DEFAULT_DB_FILE_NAME)).close();   // /install/db_name/tables/default_table.tvdbb
-        file_mm->OpenOrMkdir(lw->cal_url_util->GetTableDataFolder(DEFAULT_DB_FILE_NAME));    // /install/db_name/tables/data
-        file_mm->ReadOrCreateFile(lw->cal_url_util->GetTableDataFile(DEFAULT_DB_FILE_NAME, DEFAULT_TABLE_DATA_FILE_NAME)).close();   // /install/db_name/tables/data/default_table.data
+        file_mm->ReadOrCreateFile(lw->cal_url_util->GetTableHeaderFile(DEFAULT_DB_FILE_NAME)).close();   // /install/base_db/tables/default_table.tvdbb
+        file_mm->OpenOrMkdir(lw->cal_url_util->GetTableDataFolder(DEFAULT_DB_FILE_NAME));    // /install/base_db/tables/data
+        file_mm->ReadOrCreateFile(lw->cal_url_util->GetTableDataFile(DEFAULT_DB_FILE_NAME, DEFAULT_TABLE_DATA_FILE_NAME)).close();   // /install/base_db/tables/data/default_table.data
 
         // 2. Write data into table header file (data address is 0, because the data of default table must in the first block of table data file)
         // Construct a block to read from or write to disk, construct a column_table (only has one column), and insert to block
@@ -363,7 +366,10 @@ public:
     void CreateDefaultTable(string db_name)
     {
         // 1、create default table header file
+        file_mm->OpenOrMkdir(lw->cal_url_util->GetDefaultTablePath(db_name));  // /install/db_name/tables
         file_mm->ReadOrCreateFile(lw->cal_url_util->GetTableHeaderFile(db_name)).close();   // /install/db_name/tables/default_table.tvdbb
+        file_mm->OpenOrMkdir(lw->cal_url_util->GetTableDataFolder(db_name));    // /install/db_name/tables/data
+        file_mm->ReadOrCreateFile(lw->cal_url_util->GetTableDataFile(db_name, DEFAULT_TABLE_DATA_FILE_NAME)).close();   // /install/db_name/tables/data/default_table.data
 
         // 2、write data into table header file (data address is 0, because the data of default table must in the first block of table data file)
         // construct a block to read from or write to disk, construct a column_table(only has one column), and insert to block
@@ -372,10 +378,6 @@ public:
         ColumnTable ct;
         ct.table_name = DEFAULT_TABLE_NAME;
         ct.table_type = COMMON;
-        
-        // 3、create data file and write the first block of each column
-        file_mm->OpenOrMkdir(lw->cal_url_util->GetTableDataFolder(db_name));    // /install/db_name/tables/data
-        file_mm->ReadOrCreateFile(lw->cal_url_util->GetTableDataFile(db_name, DEFAULT_TABLE_NAME)).close();   // /install/db_name/tables/data/default_table.data
         
         DataBlock data_block;
         default_address_type data_block_offset = lw->CreateNewBlock(db_name, DEFAULT_TABLE_NAME, data_block);
@@ -427,10 +429,10 @@ public:
         // Convert the database name to a C-style string
         char* db_name_c = new char[db_name.length()];
         memcpy(db_name_c, db_name.c_str(), db_name.length());
-        delete[] db_name_c; // Note: this line is unnecessary, as the memory is immediately freed
 
         // Create a Value object to represent the database name
         Value* eq_value = new Value(db_name_c, db_name.length());
+        delete[] db_name_c;
 
         // Create a vector to store the result values
         vector<value_tag> result_values;
@@ -476,7 +478,7 @@ public:
         DataBlock block;
 
         // Load the first data block of the column
-        bool has_next = LoadFirstDataBlock(*db, table_name, col_name, column_data_block_offset, block);
+        bool has_next = LoadFirstDataBlockForRead(*db, table_name, col_name, column_data_block_offset, block);
 
         // Store the offset of the next data block
         default_address_type cache_next_block_offset = block.next_block_pointer;
@@ -491,9 +493,10 @@ public:
         while(has_next)
         {
             // Load the next data block
-            has_next = LoadDataBlocks(*db, table_name, cache_next_block_offset, block);
+            has_next = LoadDataBlocksForRead(*db, table_name, cache_next_block_offset, block);
 
             // Store the offset of the next data block
+            column_data_block_offset = cache_next_block_offset;
             cache_next_block_offset = block.next_block_pointer;
 
             // Filter the data block to find values equal to the given value
@@ -585,40 +588,61 @@ public:
         }
     }
     
-    // return: have next block
-    bool LoadFirstDataBlock(DB& db, string table_name, string col_name, default_length_size& first_block_offset, DataBlock& block)
+    /**
+     * Loads the first data block of a column from the database.
+     * 
+     * @warning must close the slot after using!
+     * @param db The database object.
+     * @param table_name The name of the table to load the block from.
+     * @param col_name The name of the column to load the block from.
+     * @param first_block_offset The offset of the first block of the column.
+     * @param block The DataBlock object to store the loaded block.
+     * @return True if there is a next block, false otherwise.
+     */
+    bool LoadFirstDataBlockForRead(DB& db, string table_name, string col_name, default_length_size& first_block_offset, DataBlock& block)
     {
+        // Get the column table and offset from the database
         ColumnTable* table = nullptr;
         default_address_type column_offset;
         if (!GetColumn(db, table_name, col_name, table, column_offset))
         {
+            // Throw an error if the column or table does not exist
             throw std::runtime_error("DB has no table named " + table_name + " or col named " + col_name);
         }
 
-        // read the first data block of the column
+        // Read the first data block of the column
         first_block_offset = table->columns.column_storage_address_array[column_offset];
         lw->LoadBlockForRead(db.db_name, table_name, first_block_offset, block);
         
-        // TODO: close block!
+        // TODO: close the block! (this is a todo comment, indicating that this step is not implemented)
 
-        // return has next block
+        // Return true if there is a next block, false otherwise
         return block.next_block_pointer != 0x0;
     }
 
-    // return: have next block
-    bool LoadDataBlocks(DB db, string table_name, default_length_size block_address, DataBlock& block)
+    /**
+     * Loads a data block from the database and checks if there is a next block.
+     * 
+     * @warning must close the slot after using!
+     * @param db The database object.
+     * @param table_name The name of the table to load the block from.
+     * @param block_address The address of the block to load.
+     * @param block The DataBlock object to store the loaded block.
+     * @return True if there is a next block, false otherwise.
+     */
+    bool LoadDataBlocksForRead(DB db, string table_name, default_address_type block_address, DataBlock& block)
     {
+        // Check if the block address is null
         if (block_address == 0x0)
         {
+            // Throw an error if the block address is null
             throw std::runtime_error("Can not load next block, because its null");
         }
 
-        // read the next block
+        // Read the next block from the database
         lw->LoadBlockForRead(db.db_name, table_name, block_address, block);
 
-        // TODO: close block!
-
-        // return has next block
+        // Return true if there is a next block, false otherwise
         return block.next_block_pointer != 0x0;
     }
 
@@ -642,7 +666,7 @@ public:
         default_length_size data_size = insert_value->GetValueLength();
         char* value_c = new char[data_size];
         insert_value->Serialize(value_c, 0);
-
+        
         // open a data block
         DataBlock* data_block = new DataBlock();
         default_address_type read_offset = table->columns.column_storage_address_array[column_offset];
@@ -682,6 +706,8 @@ public:
         // write back
         lw->ReleaseWritingBlock(db.db_name, table->table_name, read_offset, *data_block);
 
+        delete data_block;
+        delete[] value_c;
         return true;
     }
 
