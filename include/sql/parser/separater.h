@@ -47,7 +47,7 @@ std::vector<Token> Tokenize(const std::string& sql)
             std::string word;
             while (i < sql.length() && (isalnum(sql[i]) || sql[i] == '_' || sql[i] == '*')) 
             {
-                word += toupper(sql[i]);
+                word += sql[i];
                 ++i;
             }
             if (IsKeyword(word)) 

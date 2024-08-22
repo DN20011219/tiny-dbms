@@ -82,8 +82,6 @@ public:
             std::string sql;
             getline(cin, sql);
 
-            std::cout << "input one sql: " << sql << std::endl;
-
             if (sql == "quit")
             {
                 break;

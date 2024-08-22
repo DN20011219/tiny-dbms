@@ -179,6 +179,7 @@ public:
         if (!db_operator->OpenDB(session_map[DEFAULT_DB_FOLDER_NAME]->cached_db, new_session->cached_db))
         {
             new_session->connect_state = false;
+            return;
         }
         
         // store session
@@ -269,7 +270,6 @@ public:
             msg.msg_type = special_queue_id + 1; // send back use send_back_queue_id + 1, because this queue has been used to receive information msg sent by client
             msgsnd(connector_msg_key, &msg, MSG_DATA_LENGTH, 0);
                 
-            delete[] connect_result;
             connect_result = nullptr;
         }   
     }
