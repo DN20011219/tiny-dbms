@@ -48,37 +48,86 @@ public:
 
     Columns columns;
 
-    ColumnTable()
-    {
-        column_size = 0;
+    ColumnTable() : column_size(0), columns() {}
+
+    ColumnTable(default_amount_type col_num) : column_size(col_num) {
+        if (col_num > 0) {
+            columns.column_name_array = new string[col_num];
+            columns.column_type_array = new default_enum_type[col_num];
+            columns.column_length_array = new default_length_size[col_num];
+            columns.column_index_type_array = new default_enum_type[col_num];
+            columns.column_storage_address_array = new default_address_type[col_num];
+        }
     }
 
-    ColumnTable(const ColumnTable& table)
-    {
+    ColumnTable(const ColumnTable& table) {
         table_name = table.table_name;
         table_type = table.table_type;
         column_size = table.column_size;
-        columns = table.columns;
+        columns.column_name_array = new string[column_size];
+        columns.column_type_array = new default_enum_type[column_size];
+        columns.column_length_array = new default_length_size[column_size];
+        columns.column_index_type_array = new default_enum_type[column_size];
+        columns.column_storage_address_array = new default_address_type[column_size];
+        for (size_t i = 0; i < column_size; ++i) {
+            columns.column_name_array[i] = table.columns.column_name_array[i];
+            columns.column_type_array[i] = table.columns.column_type_array[i];
+            columns.column_length_array[i] = table.columns.column_length_array[i];
+            columns.column_index_type_array[i] = table.columns.column_index_type_array[i];
+            columns.column_storage_address_array[i] = table.columns.column_storage_address_array[i];
+        }
     }
 
-    ~ColumnTable()
-    {
-    }
-
-    ColumnTable(const ColumnTable &&t)
-    {
-        table_name = std::move(t.table_name);
-        table_type = std::move(t.table_type);
-        column_size = std::move(t.column_size);
-        columns = std::move(t.columns);
+    ColumnTable(ColumnTable&& other) 
+        : table_name(other.table_name), 
+        table_type(other.table_type), 
+        column_size(other.column_size), 
+        columns(other.columns) {
+        other.column_size = 0; // mark the other object as empty
     }
 
     ColumnTable& operator=(const ColumnTable& other) {
         if (this != &other) {
+            if (column_size != 0) {
+                delete[] columns.column_name_array;
+                delete[] columns.column_type_array;
+                delete[] columns.column_length_array;
+                delete[] columns.column_index_type_array;
+                delete[] columns.column_storage_address_array;
+            }
+            table_name = other.table_name;
+            table_type = other.table_type;
+            column_size = other.column_size;
+            columns.column_name_array = new string[column_size];
+            columns.column_type_array = new default_enum_type[column_size];
+            columns.column_length_array = new default_length_size[column_size];
+            columns.column_index_type_array = new default_enum_type[column_size];
+            columns.column_storage_address_array = new default_address_type[column_size];
+            for (size_t i = 0; i < column_size; ++i) {
+                columns.column_name_array[i] = other.columns.column_name_array[i];
+                columns.column_type_array[i] = other.columns.column_type_array[i];
+                columns.column_length_array[i] = other.columns.column_length_array[i];
+                columns.column_index_type_array[i] = other.columns.column_index_type_array[i];
+                columns.column_storage_address_array[i] = other.columns.column_storage_address_array[i];
+            }
+        }
+        return *this;
+    }
+
+    ColumnTable& operator=(ColumnTable&& other) {
+        if (this != &other) {
+            if (column_size != 0) {
+                delete[] columns.column_name_array;
+                delete[] columns.column_type_array;
+                delete[] columns.column_length_array;
+                delete[] columns.column_index_type_array;
+                delete[] columns.column_storage_address_array;
+            }
             table_name = other.table_name;
             table_type = other.table_type;
             column_size = other.column_size;
             columns = other.columns;
+            other.column_size = 0; // mark the other object as empty
         }
         return *this;
     }
@@ -125,7 +174,7 @@ public:
             columns.column_index_type_array[0] = column_index_type; 
 
             columns.column_storage_address_array = new default_address_type[1];
-            columns.column_storage_address_array[0] = column_storage_address; // TODO:IMP get address from data file management
+            columns.column_storage_address_array[0] = column_storage_address;
 
             return;
         }

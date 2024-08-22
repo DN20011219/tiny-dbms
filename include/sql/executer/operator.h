@@ -179,14 +179,12 @@ public:
         char* deafult_db_name = new char[db_name.size()];
         memcpy(deafult_db_name, db_name.c_str(), db_name.size());
         Value* insert_value = new Value(deafult_db_name, db_name.size());
-        bool insert_result = InsertIntoTable(*base_db, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, insert_value);
+        InsertIntoTable(*base_db, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, insert_value, sql_response);
         delete[] deafult_db_name;
         delete insert_value;
 
-        if (!insert_result)
+        if (!sql_response->sql_state)
         {
-            sql_response->sql_state = FAILURE;
-            sql_response->information = "write " + db_name + " to base_db.default_table.db_names failure";
             return sql_response;
         }
 
@@ -225,7 +223,7 @@ public:
 
     /**
      * Creates a new table in the specified database.
-     * @todo: make Update cache -> write to header file and reload db
+     * 
      * This function performs the following steps:
      * 1. Updates the cache by adding the new table to the database's table list.
      * 2. Creates a new table data file for the table.
@@ -235,71 +233,21 @@ public:
      * @param db The database in which to create the table.
      * @param table The table to create.
      */
-    void CreateTable(DB& db, ColumnTable table)
+    SqlResponse* CreateTable(DB* db, ColumnTable* table)
     {
+        SqlResponse* sql_response = new SqlResponse();
+
         // Check if the database is the base database, which cannot be modified
-        if (db.db_name == DEFAULT_DB_FILE_NAME)
+        if (db->db_name == DEFAULT_DB_FILE_NAME)
             throw std::runtime_error("Can not create table in base_db!");
 
-        // 1. Update cache
-        db.tables.push_back(table);
+        // insert table to table header file
+        InsertIntoTableHeader(db, table, sql_response);
 
-        // 2. Create table data file
-        file_mm->ReadOrCreateFile(lw->cal_url_util->GetTableDataFile(db.db_name, table.table_name)).close();   // /install/db_name/tables/data/default_table.data
-        
-        // 3. Create data block for each column and write address to table header
-        for (default_amount_type i = 0; i < table.column_size; i++)
-        {
-            DataBlock data_block;
+        // Update cache db
+        LoadTables(db);
 
-            // Create a new data block for the column
-            default_address_type new_data_block_address = lw->CreateNewBlock(db.db_name, table.columns.column_name_array[i], data_block);
-            
-            // Initialize the data block
-            data_block.field_length = table.columns.column_length_array[i];
-            data_block.field_data_nums = 0;
-            data_block.next_block_pointer = 0;
-
-            // Write the data block to disk
-            lw->ReleaseWritingBlock(db.db_name, table.columns.column_name_array[i], new_data_block_address, data_block);
-
-            // Update the table header with the data block address
-            table.columns.column_storage_address_array[i] = new_data_block_address;
-        }
-
-        // 4. Insert the table into the table header file
-        TableBlock* block = new TableBlock();
-        default_address_type block_offset = 0;
-        lw->LoadBlockForWrite(db.db_name, DEFAULT_TABLE_NAME, block_offset, *block);
-        while (!block->InsertTable(&table))
-        {   
-            // If the block is full, create a new block and update the previous block's next pointer
-            default_address_type cache_next_block_pointer = block->next_block_pointer;
-            if (cache_next_block_pointer == 0)
-            {
-                TableBlock* new_block = new TableBlock();
-                default_address_type new_block_offset = lw->CreateNewBlock(db.db_name, DEFAULT_TABLE_NAME, *new_block);
-
-                // Update pre block information
-                block->next_block_pointer = new_block_offset;
-                lw->ReleaseWritingBlock(db.db_name, DEFAULT_TABLE_NAME, block_offset, *block);
-                delete block;
-
-                block = new_block;
-                block_offset = new_block_offset;
-
-                block->InsertTable(&table);
-                break;
-            }
-
-            // Release the current block and load the next block
-            lw->ReleaseWritingBlock(db.db_name, DEFAULT_TABLE_NAME, block_offset, *block);
-            lw->LoadBlockForWrite(db.db_name, DEFAULT_TABLE_NAME, cache_next_block_pointer, *block);
-        }
-
-        // Release the final block
-        lw->ReleaseWritingBlock(db.db_name, DEFAULT_TABLE_NAME, block_offset, *block);
-        delete block;
+        return sql_response;
     }
 
     /**
@@ -326,7 +274,7 @@ public:
 
         DataBlock data_block;
         default_address_type data_block_offset = lw->CreateNewBlock(DEFAULT_DB_FILE_NAME, DEFAULT_TABLE_NAME, data_block);
-        data_block.InitBlock(GetValueTypeLength(ValueType::VCHAR_T));
+        data_block.InitBlock(0);
 
         ColumnTable ct;
         ct.table_name = DEFAULT_TABLE_NAME;
@@ -348,9 +296,17 @@ public:
         char* deafult_db_name = new char[db_name.size()];
         memcpy(deafult_db_name, db_name.c_str(), db_name.size());
         Value* insert_value = new Value(deafult_db_name, db_name.size());
-        InsertIntoTable(base_db, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, insert_value);
+
+        SqlResponse* result = new SqlResponse();
+        InsertIntoTable(base_db, DEFAULT_TABLE_NAME, DEFAULT_TABLE_COLUMN_NAME_ONE, insert_value, result);
+        
         delete[] deafult_db_name;
         delete insert_value;
+
+        if (!result->sql_state)
+        {
+            throw std::runtime_error("Install fail");
+        }
     }
     
     /**
@@ -375,14 +331,16 @@ public:
         // construct a block to read from or write to disk, construct a column_table(only has one column), and insert to block
         TableBlock block;
         default_address_type block_offset = lw->CreateNewBlock(db_name, DEFAULT_TABLE_NAME, block);
+        block.InitBlock();
+
         ColumnTable ct;
         ct.table_name = DEFAULT_TABLE_NAME;
         ct.table_type = COMMON;
         
         DataBlock data_block;
         default_address_type data_block_offset = lw->CreateNewBlock(db_name, DEFAULT_TABLE_NAME, data_block);
-        data_block.field_data_nums = 0;
-        data_block.field_length = GetValueTypeLength(ValueType::VCHAR_T);
+        data_block.InitBlock(0);
+
         lw->ReleaseWritingBlock(db_name, DEFAULT_TABLE_NAME, data_block_offset, data_block);
 
         // write back table block
@@ -452,7 +410,7 @@ public:
         // If no results were found, the database does not exist
         return false;
     }
-    
+
     /**
      * Filters the data in a column of a table to find values that are equal to a given value.
      * @todo now have not use the log!
@@ -471,7 +429,6 @@ public:
         result_values.clear();
 
         // Declare variables to store the column table and column data block offset
-        ColumnTable* table;
         default_address_type column_data_block_offset;
 
         // Declare a DataBlock object to store the data block
@@ -506,7 +463,7 @@ public:
             lw->ReleaseReadingBlock(db->db_name, table_name, column_data_block_offset, block);
         }
     }
-
+    
     /**
      * Filters the data block to find values that are equal to the given value.
      *
@@ -524,13 +481,14 @@ public:
         default_length_size value_length = GetValueTypeLength(equal_val->value_type);
 
         // Calculate the offset of the value in the data block
-        default_address_type value_offset = BLOCK_SIZE - value_length;
+        default_address_type value_offset = block->last_record_start_address;
 
         // Loop through each value in the data block
         while (value_nums > 0)
         {
             // Deserialize the value from the data block
             Value* new_val = SerializeValueFromBuffer(equal_val->value_type, block->data, value_offset);
+            value_offset += new_val->GetValueLength();
 
             // Compare the deserialized value with the given value
             if (Compare(equal_val, new_val) == 0)
@@ -561,22 +519,23 @@ public:
         // get one slot on memory and load data from disk
         TableBlock block;
         lw->LoadBlockForRead(db->db_name, DEFAULT_TABLE_NAME, 0, block);
+        default_address_type next_block_offset = block.next_block_pointer;
 
         // deserialize the tables in tables block and cache
         for (default_amount_type i = 0; i < block.table_amount; i++)
         {
             ColumnTable table;
             table.Deserialize(block.data, block.tables_begin_address[i]);
-            db->tables.push_back(table);
+            db->tables.push_back(std::move(table));
         }
 
         lw->ReleaseReadingBlock(db->db_name, DEFAULT_TABLE_NAME, 0, block);
 
         // serialize next block, if exists
-        while (block.next_block_pointer != 0x0)
+        while (next_block_offset != 0x0)
         {
             // read next block
-            lw->LoadBlockForRead(db->db_name, DEFAULT_TABLE_NAME, block.next_block_pointer, block);
+            lw->LoadBlockForRead(db->db_name, DEFAULT_TABLE_NAME, next_block_offset, block);
             // deserialize the tables in tables block and cache
             for (default_amount_type i = 0; i < block.table_amount; i++)
             {
@@ -584,7 +543,9 @@ public:
                 table->Deserialize(block.data, block.tables_begin_address[i]);
                 db->tables.push_back(*table);
             }
-            lw->ReleaseReadingBlock(db->db_name, DEFAULT_TABLE_NAME, block.next_block_pointer, block);
+            default_address_type cached_next_block_offset = block.next_block_pointer;
+            lw->ReleaseReadingBlock(db->db_name, DEFAULT_TABLE_NAME, next_block_offset, block);
+            next_block_offset = cached_next_block_offset;
         }
     }
     
@@ -646,53 +607,79 @@ public:
         return block.next_block_pointer != 0x0;
     }
 
-    bool InsertIntoTable(DB& db, string table_name, string column_name, Value* insert_value)
-    {   
-        // check table and column exists.
+    /**
+     * Inserts a value into a specific column of a table in the database.
+     * 
+     * This function checks if the table and column exist, checks the value type,
+     * and then inserts the value into the corresponding data block.
+     * 
+     * @param db The database object.
+     * @param table_name The name of the table to insert into.
+     * @param column_name The name of the column to insert into.
+     * @param insert_value The value to be inserted.
+     * @return True if the insertion is successful, false otherwise.
+     */
+    void InsertIntoTable(DB& db, string table_name, string column_name, Value* insert_value, SqlResponse* sql_response)
+    {
+        // Check if the table and column exist
         ColumnTable* table = nullptr;
         default_address_type column_offset;
-
         if (!GetColumn(db, table_name, column_name, table, column_offset))
         {
-            return false;
-            // throw std::runtime_error("DB has no table named " + table_name + " or col named " + column_name);
+            sql_response->sql_state = FAILURE;
+            sql_response->information = "Can not find table or column!";
+            return;
         }
 
-        // check value type
+        // Check if the value type matches the column type
         if (insert_value->value_type != table->columns.column_type_array[column_offset])
         {
-            return false;
+            sql_response->sql_state = FAILURE;
+            sql_response->information = "Insert value is not column type!";
+            return;
         }
+
+        // Serialize the value into a char array
         default_length_size data_size = insert_value->GetValueLength();
         char* value_c = new char[data_size];
         insert_value->Serialize(value_c, 0);
-        
-        // open a data block
+
+        // Open the data block for the column
         DataBlock* data_block = new DataBlock();
         default_address_type read_offset = table->columns.column_storage_address_array[column_offset];
         lw->LoadBlockForWrite(db.db_name, table->table_name, read_offset, *data_block);
 
-        // get the last block
+        // Find the last block in the chain
         while (data_block->next_block_pointer != 0x0)
-        {   
-            // cache the next block offset
+        {
+            // Cache the next block offset
             default_address_type cached_next_block_offset = data_block->next_block_pointer;
 
-            // release the using block
+            // Release the current block
             lw->ReleaseWritingBlock(db.db_name, table->table_name, read_offset, *data_block);
 
-            // open the next block
+            // Open the next block
             read_offset = cached_next_block_offset;
             lw->LoadBlockForWrite(db.db_name, table->table_name, read_offset, *data_block);
         }
-        // check space
+
+        // Check if the block has enough space for the new value
         if (!data_block->HaveSpace(data_size))
         {
-            // create one new block
+            // Create a new block if the current block is full
             DataBlock* new_data_block = new DataBlock();
             default_address_type new_block_offset = lw->CreateNewBlock(db.db_name, table_name, *new_data_block);
-
-            // update the last block
+            if (table->columns.column_type_array[column_offset] == VCHAR)
+            {
+                new_data_block->InitBlock(0);
+            }
+            else
+            {
+                new_data_block->InitBlock(data_size);
+            }
+            
+            
+            // Update the last block to point to the new block
             data_block->next_block_pointer = new_block_offset;
             lw->ReleaseWritingBlock(db.db_name, table->table_name, read_offset, *data_block);
             delete data_block;
@@ -700,17 +687,93 @@ public:
             read_offset = new_block_offset;
         }
 
-        // insert data
+        // Insert the value into the block
         data_block->InsertData(value_c, data_size);
 
-        // write back
+        // Write the block back to disk
         lw->ReleaseWritingBlock(db.db_name, table->table_name, read_offset, *data_block);
 
+        // Clean up
         delete data_block;
         delete[] value_c;
-        return true;
+        
+        sql_response->sql_state = SUCCESS;
     }
 
+    /**
+     * Inserts a table header into the database.
+     * 
+     * This function creates a new data file for the table, initializes data blocks for each column,
+     * and inserts the table header into the table header file.
+     * 
+     * @param db The database object.
+     * @param table The column table object to be inserted.
+     * @param sql_response The response object to store the result of the SQL operation.
+     */
+    void InsertIntoTableHeader(DB* db, ColumnTable* table, SqlResponse* sql_response)
+    {
+        // Create a new data file for the table: /install/db_name/tables/data/table_name.data
+        file_mm->ReadOrCreateFile(lw->cal_url_util->GetTableDataFile(db->db_name, table->table_name)).close();  
+
+        // Create data blocks for each column and write address back to table
+        for (default_amount_type i = 0; i < table->column_size; i++)
+        {
+            DataBlock data_block;
+
+            // Create a new data block for the column
+            default_address_type new_data_block_address = lw->CreateNewBlock(db->db_name, table->table_name, data_block);
+            data_block.InitBlock(0);
+
+            // Write the data block to disk
+            lw->ReleaseWritingBlock(db->db_name, table->table_name, new_data_block_address, data_block);
+
+            // Update the table header with the data block address
+            table->columns.column_storage_address_array[i] = new_data_block_address;
+        }
+
+        // Insert table into the table header file
+        TableBlock* block = new TableBlock();
+        default_address_type block_offset = 0;
+        lw->LoadBlockForWrite(db->db_name, DEFAULT_TABLE_NAME, block_offset, *block);
+        while(block->next_block_pointer != 0x0)
+        {
+            default_address_type cached_next_block = block->next_block_pointer;
+            lw->ReleaseWritingBlock(db->db_name, DEFAULT_TABLE_NAME, block_offset, *block);
+
+            block_offset = cached_next_block;
+            lw->LoadBlockForWrite(db->db_name, DEFAULT_TABLE_NAME, block_offset, *block);
+        }
+        if (!block->InsertTable(table))
+        {
+            TableBlock* new_block = new TableBlock();
+            default_address_type new_block_offset = lw->CreateNewBlock(db->db_name, DEFAULT_TABLE_NAME, *new_block);
+            new_block->InitBlock();
+
+            block->next_block_pointer = new_block_offset;
+            lw->ReleaseWritingBlock(db->db_name, DEFAULT_TABLE_NAME, block_offset, *block);
+            delete block;
+
+            block = new_block;
+            block_offset = new_block_offset;
+
+            // table is too big, even one new block can not insert.
+            if (!block->InsertTable(table))
+            {
+                sql_response->sql_state = FAILURE;
+                sql_response->information = "This table is too big!";
+                lw->ReleaseWritingBlock(db->db_name, DEFAULT_TABLE_NAME, block_offset, *block);
+                delete block;
+                return;
+            }
+        }
+
+        // Release the block
+        lw->ReleaseWritingBlock(db->db_name, DEFAULT_TABLE_NAME, block_offset, *block);
+        delete block;
+
+        sql_response->sql_state = SUCCESS;
+    }
+    
     /**
      * Retrieves a column from a table in the database.
      *

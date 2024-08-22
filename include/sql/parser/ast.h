@@ -39,9 +39,10 @@ enum NodeType {
 
 enum IndexType
 {
+    NONE_INDEX,
     B_PLUS_TREE,
     UNIQUE,
-    VECTOR_INDEX_1 // this type of index will not been finished in 0.0.1 version
+    VECTOR_INDEX_1, // this type of index will not been finished in 0.0.1 version
 };
 
 struct DataBase
