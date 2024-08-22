@@ -57,6 +57,11 @@ struct BlockSlot
         delete[] data;
         read_or_write_mutex.unlock();
     }
+
+    void Clear()
+    {
+        memcpy(data, 0, BLOCK_SIZE);
+    }
 };
 
 class SlotTool
