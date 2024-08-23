@@ -11,7 +11,7 @@
 
 #include "ast.h"
 #include "sql_pattern.h"
-#include "separater.h"
+#include "work_separater.h"
 
 namespace tiny_v_dbms {
 

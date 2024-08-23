@@ -69,7 +69,7 @@ public:
         columns.column_length_array = new default_length_size[column_size];
         columns.column_index_type_array = new default_enum_type[column_size];
         columns.column_storage_address_array = new default_address_type[column_size];
-        for (size_t i = 0; i < column_size; ++i) {
+        for (default_length_size i = 0; i < column_size; ++i) {
             columns.column_name_array[i] = table.columns.column_name_array[i];
             columns.column_type_array[i] = table.columns.column_type_array[i];
             columns.column_length_array[i] = table.columns.column_length_array[i];
@@ -103,7 +103,7 @@ public:
             columns.column_length_array = new default_length_size[column_size];
             columns.column_index_type_array = new default_enum_type[column_size];
             columns.column_storage_address_array = new default_address_type[column_size];
-            for (size_t i = 0; i < column_size; ++i) {
+            for (default_length_size i = 0; i < column_size; ++i) {
                 columns.column_name_array[i] = other.columns.column_name_array[i];
                 columns.column_type_array[i] = other.columns.column_type_array[i];
                 columns.column_length_array[i] = other.columns.column_length_array[i];
@@ -239,69 +239,123 @@ public:
     }   
 
     /**
+     * @brief Calculates the total length of the serialized data for the ColumnTable struct.
+     * 
+     * This function calculates the total length of the serialized data, which includes:
+     * - The size of the table name (sizeof(default_length_size) + table_name.size())
+     * - The size of the table type (sizeof(table_type))
+     * - The size of the column amount (sizeof(default_amount_type))
+     * - The size of the column name array (sizeof(default_length_size) + columns.column_name_array[i].size() for each column)
+     * - The size of the column type array (column_size * sizeof(default_enum_type))
+     * - The size of the column length array (column_size * sizeof(default_length_size))
+     * - The size of the column index type array (column_size * sizeof(default_enum_type))
+     * - The size of the column storage address array (column_size * sizeof(default_address_type))
+     * 
+     * @return The total length of the serialized data.
+     */
+    default_length_size GetLength() {
+        default_length_size length = 0;
+
+        // table name size + table name
+        length += sizeof(default_length_size) + table_name.size();
+
+        // table type
+        length += sizeof(table_type);
+
+        // column amount
+        length += sizeof(default_amount_type);
+
+        // column name array
+        for (default_amount_type i = 0; i < column_size; ++i) {
+            length += sizeof(default_length_size) + columns.column_name_array[i].size();
+        }
+
+        // column type array
+        length += column_size * sizeof(default_enum_type);
+
+        // column length array
+        length += column_size * sizeof(default_length_size);
+
+        // column index type array
+        length += column_size * sizeof(default_enum_type);
+
+        // column storage address array
+        length += column_size * sizeof(default_address_type);
+
+        return length;
+    }
+
+    /**
      * @brief Serialize the ColumnTable struct to a binary buffer.
      * 
-     * @return A pointer to the serialized data.
+     * This function serializes the ColumnTable struct into a binary buffer, which includes:
+     * - The table name
+     * - The table type
+     * - The column amount
+     * - The column name array
+     * - The column type array
+     * - The column length array
+     * - The column index type array
+     * - The column storage address array
+     * 
+     * @param buffer The binary buffer to serialize into.
+     * @param begin_offset The starting offset in the buffer to begin serialization.
+     * 
      * @return The length of the serialized data.
      */
-    std::pair<char*, size_t> Serialize() {
-        size_t total_size = BLOCK_SIZE / 4;     // max size is BLOCK_SIZE / 4
-        char* buffer = new char[total_size];
-
-        size_t offset = 0;
+    default_length_size Serialize(char* buffer, default_length_size begin_offset) {
+        default_length_size offset = 0;
 
         // Write the table name
-        size_t table_name_size = table_name.size();
-        memcpy(buffer + offset, &table_name_size, sizeof(size_t));
-        offset += sizeof(size_t);
-        // std::cout << "table_name " << table_name << std::endl;
-        memcpy(buffer + offset, table_name.c_str(), table_name_size);
+        default_length_size table_name_size = table_name.size();
+        memcpy(buffer + offset + begin_offset, &table_name_size, sizeof(default_length_size));
+        offset += sizeof(default_length_size);
+        memcpy(buffer + offset + begin_offset, table_name.c_str(), table_name_size);
         offset += table_name_size;
 
         // Write the table type
-        size_t table_type_size = sizeof(table_type);
-        memcpy(buffer + offset, &table_type, table_type_size);
+        default_length_size table_type_size = sizeof(table_type);
+        memcpy(buffer + offset + begin_offset, &table_type, table_type_size);
         offset += table_type_size;
 
         // Write the column amount
-        memcpy(buffer + offset, &column_size, sizeof(default_amount_type));
+        memcpy(buffer + offset + begin_offset, &column_size, sizeof(default_amount_type));
         offset += sizeof(default_amount_type);
 
         // Write the column name array
         for (default_amount_type i = 0; i < column_size; ++i) {
-            size_t column_name_size = columns.column_name_array[i].size();
-            memcpy(buffer + offset, &column_name_size, sizeof(size_t));
-            offset += sizeof(size_t);
-            memcpy(buffer + offset, columns.column_name_array[i].c_str(), column_name_size);
+            default_length_size column_name_size = columns.column_name_array[i].size();
+            memcpy(buffer + offset + begin_offset, &column_name_size, sizeof(default_length_size));
+            offset += sizeof(default_length_size);
+            memcpy(buffer + offset + begin_offset, columns.column_name_array[i].c_str(), column_name_size);
             offset += column_name_size;
         }
 
         // Write the column type array
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(buffer + offset, &columns.column_type_array[i], sizeof(default_enum_type));
+            memcpy(buffer + offset + begin_offset, &columns.column_type_array[i], sizeof(default_enum_type));
             offset += sizeof(default_enum_type);
         }
 
         // Write the column length array
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(buffer + offset, &columns.column_length_array[i], sizeof(default_length_size));
+            memcpy(buffer + offset + begin_offset, &columns.column_length_array[i], sizeof(default_length_size));
             offset += sizeof(default_enum_type);
         }
 
         // Write the column index type array
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(buffer + offset, &columns.column_index_type_array[i], sizeof(default_enum_type));
+            memcpy(buffer + offset + begin_offset, &columns.column_index_type_array[i], sizeof(default_enum_type));
             offset += sizeof(default_enum_type);
         }
 
         // Write the column storage address array
         for (default_amount_type i = 0; i < column_size; ++i) {
-            memcpy(buffer + offset, &columns.column_storage_address_array[i], sizeof(default_address_type));
+            memcpy(buffer + offset + begin_offset, &columns.column_storage_address_array[i], sizeof(default_address_type));
             offset += sizeof(default_address_type);
         }
 
-        // std::cout << "(size_t)buffer" << (size_t)buffer[0] << std::endl;
-        return std::make_pair(buffer, offset);
+        return offset;
     }
 
     /**
@@ -311,13 +365,13 @@ public:
      * @param read_offset Start read offset.
      */
     void Deserialize(const char* buffer, default_length_size read_offset) {
-        size_t offset = read_offset;
+        default_length_size offset = read_offset;
 
         // Read the table name
-        size_t table_name_size;
-        memcpy(&table_name_size, buffer + offset, sizeof(size_t));
+        default_length_size table_name_size;
+        memcpy(&table_name_size, buffer + offset, sizeof(default_length_size));
         // std::cout << "table_name_size" << table_name_size << std::endl;
-        offset += sizeof(size_t);
+        offset += sizeof(default_length_size);
         table_name.resize(table_name_size);
         memcpy(&table_name[0], buffer + offset, table_name_size);
         offset += table_name_size;
@@ -335,9 +389,9 @@ public:
         // Read the column name array
         columns.column_name_array = new string[column_size];
         for (default_amount_type i = 0; i < column_size; ++i) {
-            size_t column_name_size;
-            memcpy(&column_name_size, buffer + offset, sizeof(size_t));
-            offset += sizeof(size_t);
+            default_length_size column_name_size;
+            memcpy(&column_name_size, buffer + offset, sizeof(default_length_size));
+            offset += sizeof(default_length_size);
             columns.column_name_array[i].resize(column_name_size);
             memcpy(&columns.column_name_array[i][0], buffer + offset, column_name_size);
             offset += column_name_size;

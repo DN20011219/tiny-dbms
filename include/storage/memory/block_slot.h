@@ -60,7 +60,7 @@ struct BlockSlot
 
     void Clear()
     {
-        memcpy(data, 0, BLOCK_SIZE);
+        memset(data, 0, BLOCK_SIZE);
     }
 };
 
