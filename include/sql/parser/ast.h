@@ -15,6 +15,8 @@
 
 #include "../../meta/value.h"
 #include "../../config.h"
+#include "../sql_struct.h"
+
 #include "token.h"
 
 using std::vector;
@@ -25,118 +27,7 @@ using std::stringstream;
 
 namespace tiny_v_dbms {
 
-// means this base node is used to store which type of sql.
-enum NodeType {
-    CREATE_DATABASE_NODE,
-    CREATE_TABLE_NODE,
-    INSERT_INTO_TABLE_NODE,
-    SELECT_FROM_ONE_TABLE_NODE,
-    DROP_DATABASE_NODE,
-    DROP_TABLE_NODE,
-
-    UNSUPPORT_NODE
-};
-
-enum IndexType
-{
-    NONE_INDEX,
-    B_PLUS_TREE,
-    UNIQUE,
-    VECTOR_INDEX_1, // this type of index will not been finished in 0.0.1 version
-};
-
-struct DataBase
-{
-    string db_name;
-};
-
-struct Column
-{
-    string col_name;
-    ValueType value_type;
-    int col_length;
-};
-
-struct Index
-{
-    string index_name;
-    string col_nname;
-    IndexType index_type;
-};
-
-
-enum Comparator
-{
-    BIGGER,
-    LESS,
-    EQUAL,
-    NOT_EQUAL
-};
-Comparator SwitchComparator(string value)
-{
-    if (value == ">")
-    {
-        return Comparator::BIGGER;
-    } 
-    else if (value == "<")
-    {
-        return Comparator::LESS;
-    } 
-    else if (value == "=")
-    {
-        return Comparator::EQUAL;
-    } 
-    else if (value == "!=")
-    {
-        return Comparator::NOT_EQUAL;
-    } 
-    else 
-    {
-        throw std::runtime_error("value: " + value + " can not be parsed to Comparator");
-    }
-}
-struct CompareCondition  // such as a = b, a != b, a > b, a < b
-{
-    Column col;
-    Comparator condition;
-    string compare_value;
-};
-
-enum OperatorEnum
-{
-    AND,
-    OR
-};
-OperatorEnum SwitchOperator(string value)
-{
-    if (value == "AND")
-    {
-        return OperatorEnum::AND;
-    } 
-    else if (value == "OR")
-    {
-        return OperatorEnum::OR;
-    } 
-    else 
-    {
-        throw std::runtime_error("value: " + value + " can not be parsed to Operator");
-    }
-}
-struct Operation
-{
-    CompareCondition left_leaf;
-    Operation* left_op;
-    OperatorEnum opreator;
-    CompareCondition right_leaf;
-};
-
-// sql struct 
-class Sql
-{
-    friend class AST;
-};
-
-class CreateDatabaseSql : public Sql
+class CreateDatabaseSql
 {
 public: 
     string db_name;
@@ -149,7 +40,7 @@ public:
         db_name = tokens[2].value;
     }
 };
-class CreateTableSql : public Sql
+class CreateTableSql
 {
 public:
     string table_name;
@@ -199,7 +90,7 @@ public:
         }
     }
 };
-class InsertIntoTableSql : public Sql
+class InsertIntoTableSql
 {
 public:
     string table_name;
@@ -265,7 +156,7 @@ public:
 };
 // now not support () and nest select
 // only support easy select such as: select a, b, c from table_1 where e > 2 AND e = 2 OR a <> "test";
-class SelectFromOneTableSql : public Sql
+class SelectFromOneTableSql
 {
 public:
     string table_name;
@@ -468,7 +359,7 @@ public:
 //     string table_name;
 //     vector<Column> columns;
 // };
-struct DropDatabaseSql : public Sql
+struct DropDatabaseSql
 {
 public:
     string db_name;
@@ -476,7 +367,7 @@ public:
 public:
     DropDatabaseSql(vector<Token> tokens);
 };
-struct DropTableSql : public Sql
+struct DropTableSql
 {
 public:
     string table_name;

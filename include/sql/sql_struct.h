@@ -10,6 +10,7 @@
 #include <string>
 
 #include "../bench/session.h"
+#include "../meta/value.h"
 #include "../config.h"
 
 using std::string;
@@ -74,6 +75,113 @@ struct SqlResponse
             information.assign(inform);
         }
     }
+};
+
+// means this base node is used to store which type of sql.
+enum NodeType {
+    CREATE_DATABASE_NODE,
+    CREATE_TABLE_NODE,
+    INSERT_INTO_TABLE_NODE,
+    SELECT_FROM_ONE_TABLE_NODE,
+    DROP_DATABASE_NODE,
+    DROP_TABLE_NODE,
+
+    UNSUPPORT_NODE
+};
+
+enum IndexType
+{
+    NONE_INDEX,
+    B_PLUS_TREE,
+    UNIQUE,
+    VECTOR_INDEX_1, // this type of index will not been finished in 0.0.1 version
+};
+
+struct DataBase
+{
+    string db_name;
+};
+
+struct Column
+{
+    string col_name;
+    ValueType value_type;
+    int col_length;
+};
+
+struct Index
+{
+    string index_name;
+    string col_nname;
+    IndexType index_type;
+};
+
+
+enum Comparator
+{
+    BIGGER,
+    LESS,
+    EQUAL,
+    NOT_EQUAL
+};
+
+Comparator SwitchComparator(string value)
+{
+    if (value == ">")
+    {
+        return Comparator::BIGGER;
+    } 
+    else if (value == "<")
+    {
+        return Comparator::LESS;
+    } 
+    else if (value == "=")
+    {
+        return Comparator::EQUAL;
+    } 
+    else if (value == "!=")
+    {
+        return Comparator::NOT_EQUAL;
+    } 
+    else 
+    {
+        throw std::runtime_error("value: " + value + " can not be parsed to Comparator");
+    }
+}
+
+struct CompareCondition  // such as a = b, a != b, a > b, a < b
+{
+    Column col;
+    Comparator condition;
+    string compare_value;
+};
+
+enum OperatorEnum
+{
+    AND,
+    OR
+};
+OperatorEnum SwitchOperator(string value)
+{
+    if (value == "AND")
+    {
+        return OperatorEnum::AND;
+    } 
+    else if (value == "OR")
+    {
+        return OperatorEnum::OR;
+    } 
+    else 
+    {
+        throw std::runtime_error("value: " + value + " can not be parsed to Operator");
+    }
+}
+struct Operation
+{
+    CompareCondition left_leaf;
+    Operation* left_op;
+    OperatorEnum opreator;
+    CompareCondition right_leaf;
 };
 
 }

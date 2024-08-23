@@ -112,6 +112,32 @@ public:
             return;
         }
 
+        // INSERT
+        if (ast->GetType() == INSERT_INTO_TABLE_NODE)
+        {   
+            ast->insert_into_table_sql->table_name;
+            ast->insert_into_table_sql->columns;
+            ast->insert_into_table_sql->values;
+
+            
+            default_amount_type column_nums = ast->create_table_sql->columns.size();
+            ColumnTable new_table(column_nums);
+            new_table.table_name = ast->create_table_sql->table_name;
+            new_table.table_type = 0;   // no use
+            // init col
+            for (default_amount_type i = 0; i < ast->create_table_sql->columns.size(); i++)
+            {
+                new_table.columns.column_name_array[i] = ast->create_table_sql->columns[i].col_name;
+                new_table.columns.column_length_array[i] = ast->create_table_sql->columns[i].col_length;
+                new_table.columns.column_type_array[i] = ast->create_table_sql->columns[i].value_type;
+                new_table.columns.column_index_type_array[i] = IndexType::NONE_INDEX;   // no use
+                // new_table.columns.column_storage_address_array[i]
+            }
+            executing_sql_response = op->CreateTable(user_session->cached_db, &new_table);
+
+            return;
+        }
+
         // TODO: execute other type of sql
         
         // write back result  
