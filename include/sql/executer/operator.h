@@ -288,7 +288,10 @@ public:
         }
 
         // InsertRow
-
+        if (!InsertRow(db, table, row_values, response))
+        {
+            return response;
+        }
 
         // return result
         response->sql_state = SUCCESS;
@@ -342,12 +345,27 @@ public:
         return -1;
     }
 
-    SqlResponse* InsertRow(DB* db, string table_name, vector<Value>values)
+    bool InsertRow(DB* db, ColumnTable* table, vector<Value*>& values, SqlResponse* response)
     {
         // check values amount == table.col_amount
+        if (values.size() != table->column_size)
+        {
+            response->sql_state = FAILURE;
+            response->information = "Values amount not equal table's column amount!";
+            return false;
+        }
 
         // insert each col's value
-        // InsertIntoTable();
+        for (default_amount_type i = 0; i < table->column_size; i++)
+        {
+            InsertIntoTable(*db, table->table_name, table->columns.column_name_array[i], values[i], response);
+            if (response->sql_state != SUCCESS)
+            {
+                return false;
+            }
+        }
+        
+        return true;
     }   
     
     /**
