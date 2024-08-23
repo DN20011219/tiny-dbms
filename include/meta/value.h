@@ -122,7 +122,7 @@ public:
     }
 
     // this function is used after set raw value, and know the type of value
-    void InitValue(ValueType type)
+    bool InitValue(ValueType type)
     {
         switch (type)
         {
@@ -130,23 +130,28 @@ public:
             try {
                 num_value.int_value = std::stoi(raw_value);
             } catch (std::exception& e) {
-                throw std::runtime_error("can not parse string to int");
+                return false;
+                // throw std::runtime_error("can not parse string to int");
             }
             break;
         case FLOAT_T:
             try {
-                num_value.int_value = std::stof(raw_value);
+                num_value.float_value = std::stof(raw_value);
             } catch (std::exception& e) {
-                throw std::runtime_error("can not parse string to float");
+                return false;
+                // throw std::runtime_error("can not parse string to float");
             }
             break;
         case VCHAR_T:
+            num_value.int_value = raw_value.size();
             string_value = new char[raw_value.size()];
             memcpy(string_value, raw_value.c_str(), raw_value.size());
             break;
         default:
-            throw std::runtime_error("Value: " + raw_value + " 's type is raw, need to be initialized!");
+            return false;
+            // throw std::runtime_error("Value: " + raw_value + " 's type is raw, need to be initialized!");
         }
+        return true;
     }
 
     int GetIntValue()
@@ -342,6 +347,11 @@ ValueType GetValueTypeFromStr(string value_str)
     throw std::runtime_error("can not parse value type: " + value_str);
 }
 
+ValueType GetType(default_enum_type type)
+{
+    return ValueType(type);
+}
+
 default_length_size GetValueTypeLength(ValueType type)
 {
     switch (type)
@@ -402,6 +412,38 @@ Value* SerializeValueFromBuffer(ValueType type, char* buffer, default_address_ty
             delete[] raw_val_c;
             break;
         }
+    }
+
+    return value;
+}
+
+Value* BuildDefaultValue(ValueType value_type)
+{
+    Value* value = nullptr;
+    switch (value_type)
+    {
+        case INT_T:
+        {
+            int int_val = 0;
+            value = new Value(int_val);
+            break;
+        }
+        case FLOAT_T:
+        {
+            float float_val = 0;
+            value = new Value(float_val);
+            break;
+        }
+        case VCHAR_T:
+        {
+            int char_val_len = 1;
+            char* char_val = new char[1];
+            char_val[0] = ' ';
+            value = new Value(char_val, char_val_len);
+            break;
+        }
+        default:
+            throw std::runtime_error("Can not get value length");
     }
 
     return value;

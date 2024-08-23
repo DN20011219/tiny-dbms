@@ -243,13 +243,113 @@ public:
 
         // insert table to table header file
         InsertIntoTableHeader(db, table, sql_response);
-        
+
         // Update cache db
         ReLoadTables(db);
 
         return sql_response;
     }
 
+    /**
+     * @todo
+     */
+    SqlResponse* Insert(DB* db, string table_name, vector<Column> columns, vector<Value>values)
+    {
+        SqlResponse* response;
+        response = new SqlResponse();
+
+        // get table
+        ColumnTable* table;
+        if (!GetTable(*db, table_name, table))
+        {
+            response->sql_state = FAILURE;
+            response->information = "Can not find " + table_name + " in db " + db->db_name;
+            return response;
+        }
+
+        // check column exist
+        for (const auto& item : columns)
+        {
+            if (!CheckColumn(table, item))
+            {
+                response->sql_state = FAILURE;
+                response->information = "Can not find " + table_name + " in db " + db->db_name;
+                return response;
+            }
+        }
+
+        // joint values as db's columns order, if not exists in columns, fill with default value
+        vector<Value*> row_values;
+        if (!JointRow(table, &columns, &values, &row_values))
+        {
+            response->sql_state = FAILURE;
+            response->information = "Can not convert value to column type!";
+            return response;
+        }
+
+        // InsertRow
+
+
+        // return result
+        response->sql_state = SUCCESS;
+        return response;
+    }
+
+    bool CheckColumn(ColumnTable* table, const Column& column)
+    {
+        for (default_length_size i = 0; i < table->column_size; i++)
+        {
+            if (table->columns.column_name_array[i] == column.col_name)
+            {
+                // column.value_type = GetType(table->columns.column_type_array[i]);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool JointRow(ColumnTable* table, vector<Column>* columns, vector<Value>* values, vector<Value*>* row)
+    {
+        row->clear();
+        for (default_length_size i = 0; i < table->column_size; i++)
+        {
+            default_length_size val_position = FindValue(table->columns.column_name_array[i], columns);
+            if (val_position == -1)
+            {
+                row->push_back(BuildDefaultValue(GetType(table->columns.column_type_array[i])));
+            }
+            else
+            {
+                // init raw value to value type, if can not parse, return false
+                if (!values->at(val_position).InitValue(GetType(table->columns.column_type_array[i])))
+                    return false;
+                row->push_back(new Value(values->at(val_position)));
+            }
+        }
+        values->clear();
+        return true;
+    }
+
+    default_length_size FindValue(string col_name, vector<Column>* columns)
+    {
+        for (default_length_size i = 0; i < columns->size(); i++)
+        {
+            if (columns->at(i).col_name == col_name)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    SqlResponse* InsertRow(DB* db, string table_name, vector<Value>values)
+    {
+        // check values amount == table.col_amount
+
+        // insert each col's value
+        // InsertIntoTable();
+    }   
+    
     /**
      * Creates the default table for the base database.
      * 
@@ -790,17 +890,15 @@ public:
     }
     
     /**
-     * Retrieves a column from a table in the database.
-     *
-     * @param db The database to search in.
-     * @param table_name The name of the table to search in.
-     * @param column_name The name of the column to retrieve.
-     * @param table A pointer to the ColumnTable object that will be populated with the retrieved column.
-     * @param column_offset The offset of the column in the table.
-     *
-     * @return True if the column is found, false otherwise.
+     * Retrieves a table from the database by name.
+     * 
+     * @param db The database object to search for the table.
+     * @param table_name The name of the table to retrieve.
+     * @param table A pointer to a ColumnTable object that will be set to the retrieved table, or nullptr if not found.
+     * 
+     * @return true if the table is found, false otherwise.
      */
-    bool GetColumn(DB& db, string table_name, string column_name, ColumnTable*& table, default_address_type& column_offset)
+    bool GetTable(DB& db, string table_name,  ColumnTable*& table)
     {
         // Check if the table exists in the database
         table = nullptr;
@@ -816,6 +914,26 @@ public:
         }
         // If the table is not found, return false
         if (table == nullptr)
+        {
+            return false;
+        }
+    }
+
+    /**
+     * Retrieves a column from a table in the database.
+     *
+     * @param db The database to search in.
+     * @param table_name The name of the table to search in.
+     * @param column_name The name of the column to retrieve.
+     * @param table A pointer to the ColumnTable object that will be populated with the retrieved column.
+     * @param column_offset The offset of the column in the table.
+     *
+     * @return True if the column is found, false otherwise.
+     */
+    bool GetColumn(DB& db, string table_name, string column_name, ColumnTable*& table, default_address_type& column_offset)
+    {
+        // Check if the table exists in the database
+        if (!GetTable(db, table_name, table))
         {
             return false;
         }
