@@ -33,7 +33,12 @@ public:
         {
             throw std::runtime_error("msg queue not start successfully");
         }
-        std::cout << "connector_msg_key: " << connector_msg_key << std::endl;
+        if (worker_msg_key < 0)
+        {
+            throw std::runtime_error("msg queue not start successfully");
+        }
+        // std::cout << "worker_msg_key: " << worker_msg_key << std::endl;
+        // std::cout << "connector_msg_key: " << connector_msg_key << std::endl;
 
         ConnectMsg msg;
 
@@ -42,20 +47,20 @@ public:
         memcpy(msg.msg_data, &communicate_queue_id, sizeof(long)); // special queue id
         msgsnd(connector_msg_key, &msg, MSG_DATA_LENGTH, 0);
 
-        std::cout << "have send msg to: " << CONNECTOR_MSG_TYPE_RECV << "  data is: " << communicate_queue_id << std::endl;
+        // std::cout << "have send msg to: " << CONNECTOR_MSG_TYPE_RECV << "  data is: " << communicate_queue_id << std::endl;
 
         // set information about the second msg
         msg.msg_type = communicate_queue_id; // use special queue
         msg.Serialize(ip, port, connect_identity_type, db_name); // serialize data
         msgsnd(connector_msg_key, &msg, MSG_DATA_LENGTH, 0);
 
-        std::cout << "have send msg to: " << communicate_queue_id << std::endl;
+        // std::cout << "have send msg to: " << communicate_queue_id << std::endl;
 
         // receive connect result
         msg.msg_type = communicate_queue_id + 1; // use special queue
         msgrcv(connector_msg_key, &msg, MSG_DATA_LENGTH, communicate_queue_id + 1, 0);
 
-        std::cout << "have received msg from: " << communicate_queue_id + 1 << std::endl;
+        // std::cout << "have received msg from: " << communicate_queue_id + 1 << std::endl;
 
         bool state;
         string connect_result = ConnectMsg::DeserializeConnectResult(msg, state);
@@ -66,17 +71,12 @@ public:
             throw std::runtime_error("Client connect to server fail! db_name: " + db_name);
         }
 
-        std::cout << "-----------Connect result-----------" << std::endl;
+        std::cout << std::endl;
+        std::cout << "-----------Connect to " << db_name << " result-----------" << std::endl;
         std::cout << connect_result << std::endl;
-        std::cout << "-----------Connect result-----------" << std::endl;
-
+        std::cout << "-----------Connect to " << db_name << " result-----------" << std::endl;
 
         // handle sql
-        if (worker_msg_key < 0)
-        {
-            throw std::runtime_error("msg queue not start successfully");
-        }
-        std::cout << "worker_msg_key: " << worker_msg_key << std::endl;
         while(true)
         {
             std::string sql;
@@ -117,7 +117,12 @@ public:
                 std::cout << "EXECUTING" << std::endl;
                 break;
             case SUCCESS:
-                std::cout << "SUCCESS: " << response.information << std::endl;
+                std::cout << "SUCCESS";
+                if (response.information.size() > 0)
+                {
+                    std::cout << response.information;
+                }
+                std::cout << std::endl;
                 break;
             default:
                 break;
