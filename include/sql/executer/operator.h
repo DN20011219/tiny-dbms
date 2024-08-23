@@ -243,9 +243,9 @@ public:
 
         // insert table to table header file
         InsertIntoTableHeader(db, table, sql_response);
-
+        
         // Update cache db
-        LoadTables(db);
+        ReLoadTables(db);
 
         return sql_response;
     }
@@ -509,7 +509,22 @@ public:
         }
     }
 
-    // read table headers stored in default_table.tvdbb
+    /**
+     * Reloads tables from a database file into memory, replacing any existing tables.
+     * 
+     * @param db The database object to reload tables into.
+     */
+    void ReLoadTables(DB* db)
+    {
+        db->tables.clear();
+        LoadTables(db);
+    }
+
+    /**
+     * Loads tables from a database file into memory.
+     * 
+     * @param db The database object to load tables into.
+     */
     void LoadTables(DB* db)
     {
         // open db file, like "db.tvbb", and deserialize to get default table name
@@ -568,7 +583,7 @@ public:
         if (!GetColumn(db, table_name, col_name, table, column_offset))
         {
             // Throw an error if the column or table does not exist
-            throw std::runtime_error("DB has no table named " + table_name + " or col named " + col_name);
+            throw std::runtime_error("DB " + db.db_name + " has no table named " + table_name + " or col named " + col_name);
         }
 
         // Read the first data block of the column

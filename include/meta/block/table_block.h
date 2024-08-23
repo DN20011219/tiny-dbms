@@ -93,81 +93,66 @@ public:
 
     // return true if the address is ok
     // return false when there has no space to contain the table in this block
-    bool CalBeginAddress(ColumnTable* table, default_address_type& address)
+    bool CalBeginAddress(ColumnTable* table, default_length_size table_length, default_address_type& address)
     {
-        size_t table_length = table->Serialize().second;
+        CalAndUpdateFreeSpace();
+
+        if (table_length > free_space) 
+        {
+            return false;
+        }
+
         if (table_amount == 0)
         {
             address = BLOCK_SIZE - table_length;
-            return true;
         }
-
-        address = tables_begin_address[table_amount - 1] - table_length;
-        if (address >= sizeof(default_amount_type) + sizeof(default_length_size) + sizeof(default_address_type) + table_amount * sizeof(default_address_type))
+        else 
         {
-            return true;
+            address = tables_begin_address[table_amount - 1] - table_length;
         }
 
-        // if this block has no space to contain this table, return false.
-        return false;
+        return true;
     }
 
     bool InsertTable(ColumnTable* table)
     {   
         default_address_type insert_address;
+        default_length_size length = table->GetLength();
 
-        if (table_amount == 0)
-        {   
-            if (CalBeginAddress(table, insert_address))
-            {  
+        if (CalBeginAddress(table, length, insert_address))
+        { 
+            if (table_amount == 0)
+            {   
                 table_amount++;
                 tables_begin_address = new default_address_type[1];
                 tables_begin_address[0] = insert_address;
-                std::pair<char *, size_t> serialize_result = table->Serialize();
-                memcpy(data + insert_address, serialize_result.first, serialize_result.second);
-                delete[] serialize_result.first;
-                CalAndUpdateFreeSpace();
-                SerializeHeader();
-
-                return true;
+                    
+                // update data*
+                table->Serialize(data, insert_address);
             }
             else
             {
-                return false;
-                // throw std::runtime_error("Failed to insert table in block");
+                table_amount++;
+                default_address_type* cache_address = new default_address_type[table_amount];
+                memcpy(cache_address, tables_begin_address, (table_amount - 1) * sizeof(default_address_type));
+                cache_address[table_amount - 1] = insert_address;
+                delete[] tables_begin_address;
+                tables_begin_address = cache_address;
+
+                // update data*
+                table->Serialize(data, insert_address);
             }
-        }
-
-        if (CalBeginAddress(table, insert_address))
-        {   
-            table_amount++;
-            default_address_type* cache_address = new default_address_type[table_amount];
-            memcpy(cache_address, tables_begin_address, (table_amount - 2));
-            cache_address[table_amount - 1] = insert_address;
-            delete[] tables_begin_address;
-            tables_begin_address = cache_address;
-
-            // write in memory block
-            memcpy(data + insert_address, table->Serialize().first, table->Serialize().second);
-            CalAndUpdateFreeSpace();
-            SerializeHeader();
             return true;
         }
-        else
-        {
-            return false;
-            // throw std::runtime_error("Failed to insert table in block");
-            // TODO: create new table block and insert
-        }
 
-
+        return false;
     }
 
     /**
      * @brief Serialize the TableBlock struct to a binary buffer which is controlled by mm.
      */
     void SerializeHeader() {
-        size_t offset = 0;
+        default_length_size offset = 0;
 
         // Write the table amount
         memcpy(data + offset, &table_amount, sizeof(default_amount_type));
@@ -195,7 +180,7 @@ public:
      */
     void DeserializeFromBuffer(const char* buffer) 
     {
-        size_t offset = 0;
+        default_length_size offset = 0;
 
         // Read the table amount
         memcpy(&table_amount, buffer + offset, sizeof(default_amount_type));

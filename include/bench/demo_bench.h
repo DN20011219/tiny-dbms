@@ -17,7 +17,7 @@
 #include <dirent.h>
 
 #include "../storage/file_management.h"
-#include "../sql/parser/separater.h"
+#include "../sql/parser/work_separater.h"
 #include "../sql/parser/parser.h"
 // #include "db_management.h"
 #include "server.h"

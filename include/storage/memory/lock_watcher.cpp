@@ -349,12 +349,13 @@ default_address_type LockWatcher::CreateNewBlock(std::string db_name, std::strin
     slot->read_or_write_mutex.lock();
     slot->in_use = true;
     slot->user_amount++;
+    slot->Clear();
 
     // update map
     slots_map[sign] = slot;
     // set pointer
     block.data = slot->data;
-
+    
     // bfmm->WriteBackDataBlock(cal_url_util->GetTableDataFile(db_name, table_name), new_block_offset, block);
 
     slots_map_mutex.unlock();
@@ -384,6 +385,7 @@ default_address_type LockWatcher::CreateNewBlock(std::string db_name, std::strin
     slot->read_or_write_mutex.lock();
     slot->in_use = true;
     slot->user_amount++;
+    slot->Clear();
 
     // update map
     slots_map[sign] = slot;

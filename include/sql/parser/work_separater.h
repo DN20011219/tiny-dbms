@@ -1,6 +1,6 @@
 // Copyright (c) 2024 by dingning
 //
-// file  : separater.h
+// file  : work_separater.h
 // since : 2024-07-25
 // desc  : this is a word separating tools, use it can separate one sql to segments and store the segment type.
 
