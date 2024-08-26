@@ -9,6 +9,7 @@
 #define VDBMS_SQL_EXECUTER_OPERATOR_H_
 
 #include <iostream>
+#include <set>
 
 #include "../../config.h"
 // meta struct
@@ -32,6 +33,7 @@
 // util
 #include "../../utils/cal_file_url_util.h"
 
+using std::set;
 
 namespace tiny_v_dbms {
 
@@ -287,7 +289,7 @@ public:
 
         // joint values as db's columns order, if not exists in columns, fill with default value
         vector<Value*> row_values;
-        if (!JointRow(table, &columns, &values, &row_values))
+        if (!JointParamRow(table, &columns, &values, &row_values))
         {
             response->sql_state = FAILURE;
             response->information = "Can not convert value to column type!";
@@ -327,7 +329,7 @@ public:
     }
 
     /**
-     * JointRow: Joins a row of values with a column table.
+     * JointParamRow: Joins a row of values with a column table.
      * 
      * @param table: The column table to join with.
      * @param columns: The vector of column names.
@@ -336,7 +338,7 @@ public:
      * 
      * @return true if the join is successful, false otherwise.
      */
-    bool JointRow(ColumnTable* table, vector<Column>* columns, vector<Value>* values, vector<Value*>* row)
+    bool JointParamRow(ColumnTable* table, vector<Column>* columns, vector<Value>* values, vector<Value*>* row)
     {
         row->clear();
         for (default_length_size i = 0; i < table->column_size; i++)
@@ -570,6 +572,16 @@ public:
         }
         // If no results were found, the database does not exist
         return false;
+    }
+
+    vector<default_length_size> GetSelectCols(ColumnTable* table, vector<Column>& columns)
+    {
+
+    }
+
+    void InnerJoinColumns(vector<Row*>& result_rows, vector<value_tag>* col1_values, ...)
+    {
+        
     }
 
     /**
@@ -901,6 +913,55 @@ public:
             tag_offset++;
         }
     }
+
+    void SameColAndOp(vector<value_tag> left_vector, vector<value_tag> right_vector, vector<value_tag>& result)
+    {
+        set<size_t> existed_id;
+        for (auto& item : left_vector)
+        {
+            existed_id.insert(item.first);
+        }
+        for (auto& item : right_vector)
+        {
+            if (existed_id.find(item.first) != existed_id.end())
+            {
+                result.push_back(item);
+            }
+        }
+    }
+
+    void SameColOrOp(vector<value_tag> left_vector, vector<value_tag> right_vector, vector<value_tag>& result)
+    {
+        set<size_t> existed_id;
+        for (auto& item : left_vector)
+        {
+            result.push_back(item);
+            existed_id.insert(item.first);
+        }
+        for (auto& item : right_vector)
+        {
+            if (existed_id.find(item.first) == existed_id.end())
+            {
+                result.push_back(item);
+                existed_id.insert(item.first);
+            }
+        }
+    }
+
+    void DifferentColAndOP(vector<value_tag> left_vector, vector<value_tag> right_vector, vector<Row*>& result)
+    {
+
+    }
+
+    void DifferentColOrOP(vector<value_tag> left_vector, vector<value_tag> right_vector, vector<Row*>& result)
+    {
+        
+    }
+
+    // void NotOp()
+    // {
+
+    // }
 
     /**
      * Reloads tables from a database file into memory, replacing any existing tables.
