@@ -105,17 +105,17 @@ namespace tiny_v_dbms {
 
     #ifndef CONNECTOR_MSG_KEY
     #define CONNECTOR_MSG_KEY
-    const int connector_msg_key = msgget(ftok("/tmp/tvdbms_connect", 7), IPC_CREAT | 0755);
+    const int connector_msg_key = msgget(ftok("/tmp/tvdbms/tvdbms_connect", 1), IPC_CREAT | 0755);
     #endif // CONNECTOR_MSG_KEY
 
     #ifndef WORKER_MSG_KEY
     #define WORKER_MSG_KEY
-    const int worker_msg_key = msgget(ftok("/tmp/tvdbms_work", 8), IPC_CREAT | 0755);
+    const int worker_msg_key = msgget(ftok("/tmp/tvdbms/tvdbms_work", 2), IPC_CREAT | 0755);
     #endif // WORKER_MSG_KEY
     
     #ifndef BASE_DATABASE_WORKER_MSG_KEY
     #define BASE_DATABASE_WORKER_MSG_KEY
-    const int base_db_worker_msg_key = msgget(ftok("/tmp/tvdbms_base_db_work", 9), IPC_CREAT | 0755);
+    const int base_db_worker_msg_key = msgget(ftok("/tmp/tvdbms/tvdbms_base_db_work", 3), IPC_CREAT | 0755);
     #endif // BASE_DATABASE_WORKER_MSG_KEY
 
     #ifndef FREE_QUEUE_ID_ARRAY

@@ -63,7 +63,7 @@ public:
         }
 
         // Open the file in read-write mode
-        file_stream.open(file_path, std::ios::in | std::ios::out);
+        file_stream.open(file_path, std::ios::binary | std::ios::in | std::ios::out);
 
         // Check if the file was opened successfully
         if (!file_stream.is_open()) {
@@ -97,7 +97,7 @@ public:
         }
 
         // Open the file in read-write mode
-        file_stream.open(file_path, std::ios::in | std::ios::out);
+        file_stream.open(file_path, std::ios::binary | std::ios::in | std::ios::out);
 
         // Check if the file was opened successfully
         if (!file_stream.is_open()) {
@@ -107,7 +107,7 @@ public:
 
     void OpenFileWithoutCheck(string file_path, fstream& file_stream)
     {
-        file_stream.open(file_path, std::ios::in | std::ios::out);
+        file_stream.open(file_path, std::ios::binary | std::ios::in | std::ios::out);
         if (!file_stream.is_open()) {
             std::ofstream create_file(file_path);
             create_file.close();
@@ -166,6 +166,12 @@ public:
     default_address_type GetNewBlockAddress(fstream& file_stream)
     {
         default_length_size block_size = BLOCK_SIZE;
+        file_stream.seekg(0, std::ios::end); // seek to the end of the file
+        default_address_type used_header = file_stream.tellg() % block_size;
+        if (used_header == 0)
+        {
+            return file_stream.tellg() / block_size;
+        }
         return file_stream.tellg() / block_size;
     }
 
@@ -173,7 +179,14 @@ public:
     {
         fstream stream;
         OpenFileWithoutCheck(file_uri, stream);
-        return stream.tellg() / BLOCK_SIZE;
+        stream.seekg(0, std::ios::end); // seek to the end of the file
+        size_t length = stream.tellg();
+        default_address_type used_header = length % BLOCK_SIZE;
+        if (used_header == 0)
+        {
+            return length / BLOCK_SIZE;
+        }
+        return length / BLOCK_SIZE + 1;
     }
 
     /**

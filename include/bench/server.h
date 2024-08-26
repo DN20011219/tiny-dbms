@@ -34,6 +34,13 @@ public:
         connector = new Connector(worker_map, op);
     }
 
+    ~Server()
+    {
+        msgctl(connector_msg_key, IPC_RMID, nullptr);
+        msgctl(worker_msg_key, IPC_RMID, nullptr);
+        msgctl(base_db_worker_msg_key, IPC_RMID, nullptr);
+    }
+
     void Run()
     {   
         // Run connector

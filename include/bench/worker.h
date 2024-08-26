@@ -69,8 +69,6 @@ public:
     void Work()
     {
         // execute sql
-        cout << "input Work sql: " << executing_sql << endl;
-        
         AST* ast = parser->BuildAST(executing_sql);
         
         // if sql can not be parsed, return false
@@ -112,40 +110,27 @@ public:
             return;
         }
 
-        // INSERT
+        // INSERT todo:test
         if (ast->GetType() == INSERT_INTO_TABLE_NODE)
         {   
-            ast->insert_into_table_sql->table_name;
-            ast->insert_into_table_sql->columns;
-            ast->insert_into_table_sql->values;
-
-            
-            default_amount_type column_nums = ast->create_table_sql->columns.size();
-            ColumnTable new_table(column_nums);
-            new_table.table_name = ast->create_table_sql->table_name;
-            new_table.table_type = 0;   // no use
-            // init col
-            for (default_amount_type i = 0; i < ast->create_table_sql->columns.size(); i++)
-            {
-                new_table.columns.column_name_array[i] = ast->create_table_sql->columns[i].col_name;
-                new_table.columns.column_length_array[i] = ast->create_table_sql->columns[i].col_length;
-                new_table.columns.column_type_array[i] = ast->create_table_sql->columns[i].value_type;
-                new_table.columns.column_index_type_array[i] = IndexType::NONE_INDEX;   // no use
-                // new_table.columns.column_storage_address_array[i]
-            }
-            executing_sql_response = op->CreateTable(user_session->cached_db, &new_table);
+            executing_sql_response = op->Insert(
+                user_session->cached_db, 
+                ast->insert_into_table_sql->table_name, 
+                ast->insert_into_table_sql->columns, 
+                ast->insert_into_table_sql->values
+            );
 
             return;
         }
+
+        // SELECT todo:
 
         // TODO: execute other type of sql
         
         // write back result  
         executing_sql_response = new SqlResponse();
         executing_sql_response->sql_state = SqlState::SUCCESS;
-        executing_sql_response->information = "success";
-
-         cout << "input executing_sql_response: " << executing_sql_response->information << endl;
+        executing_sql_response->information = "success";  
     }
 
     void RootIdentityWork()
@@ -213,8 +198,6 @@ public:
         {
             throw std::runtime_error("worker_msg_key queue not start successfully");
         }
-        
-        cout << "worker_msg_key: " << worker_msg_key << endl;
 
         WorkMsg work_msg;
         long send_back_id = user_session->msg_queue_id + 1; // store the send back queue id
@@ -224,7 +207,7 @@ public:
             // receive msg id
             work_msg.msg_type = user_session->msg_queue_id; // use special receive queue id
             msgrcv(worker_msg_key, &work_msg, WORK_MSG_DATA_LENGTH, user_session->msg_queue_id, 0);
-
+            
             // get sql length
             int sql_length;
             memcpy(&sql_length, work_msg.msg_data, sizeof(sql_length));
@@ -237,7 +220,9 @@ public:
             delete[] sql_cache;
 
             // execute sql
+            cout << "input Work sql: " << executing_sql << endl;
             Work();
+            cout << "input executing_sql_response: " << executing_sql_response->sql_state << " " << executing_sql_response->information << endl;
 
             // write response to queue
             executing_sql_response->Serialize(work_msg.msg_data);

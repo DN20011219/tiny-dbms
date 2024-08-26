@@ -7,9 +7,24 @@
 #ifndef VDBMS_SQL_EXECUTER_PLAN_H_
 #define VDBMS_SQL_EXECUTER_PLAN_H_
 
+#include "../parser/ast.h"
+#include "operator.h"
+
 namespace tiny_v_dbms {
 
+class Optimizer
+{
+private:
+    Operator* op;
 
+public:
+
+    SqlResponse* ExecuteSelect(SelectFromOneTableSql* sql)
+    {
+        
+    }
+
+};
 
 }
 

@@ -24,7 +24,6 @@ const long queue_list_range[] = {1, 3, 5, 7, 9};  // skip 1, because of the msg 
 
 class Client
 {
-
 public:
 
     void RunClient(std::string ip, int port, int connect_identity_type, std::string db_name, long communicate_queue_id)
@@ -37,8 +36,6 @@ public:
         {
             throw std::runtime_error("msg queue not start successfully");
         }
-        // std::cout << "worker_msg_key: " << worker_msg_key << std::endl;
-        // std::cout << "connector_msg_key: " << connector_msg_key << std::endl;
 
         ConnectMsg msg;
 
@@ -47,20 +44,14 @@ public:
         memcpy(msg.msg_data, &communicate_queue_id, sizeof(long)); // special queue id
         msgsnd(connector_msg_key, &msg, MSG_DATA_LENGTH, 0);
 
-        // std::cout << "have send msg to: " << CONNECTOR_MSG_TYPE_RECV << "  data is: " << communicate_queue_id << std::endl;
-
         // set information about the second msg
         msg.msg_type = communicate_queue_id; // use special queue
         msg.Serialize(ip, port, connect_identity_type, db_name); // serialize data
         msgsnd(connector_msg_key, &msg, MSG_DATA_LENGTH, 0);
 
-        // std::cout << "have send msg to: " << communicate_queue_id << std::endl;
-
         // receive connect result
         msg.msg_type = communicate_queue_id + 1; // use special queue
         msgrcv(connector_msg_key, &msg, MSG_DATA_LENGTH, communicate_queue_id + 1, 0);
-
-        // std::cout << "have received msg from: " << communicate_queue_id + 1 << std::endl;
 
         bool state;
         string connect_result = ConnectMsg::DeserializeConnectResult(msg, state);
@@ -75,17 +66,29 @@ public:
         std::cout << "-----------Connect to " << db_name << " result-----------" << std::endl;
         std::cout << connect_result << std::endl;
         std::cout << "-----------Connect to " << db_name << " result-----------" << std::endl;
+        std::cout.flush();
 
         // handle sql
         while(true)
         {
             std::string sql;
-            getline(cin, sql);
+
+            std::cin.sync();
+
+            std::getline(std::cin, sql);
+
+            sql.erase(0, sql.find_first_not_of(" \t\n\r\f\v"));
+            sql.erase(sql.find_last_not_of(" \t\n\r\f\v") + 1);
+
+            if (sql.empty()) {
+                continue;
+            }
 
             if (sql == "quit")
             {
                 break;
             }
+
             assert(sql.length() < SQL_MAX_LENGTH);
 
             // serialize sql
@@ -108,22 +111,46 @@ public:
             switch (response.sql_state)
             {
             case UNSUBMIT:
+            {
                 std::cout << "UNSUBMIT" << std::endl;
                 break;
+            }
             case PARSE_ERROR:
+            {
                 std::cout << "PARSE_ERROR" << std::endl;
                 break;
+            }
             case EXECUTING:
+            {
                 std::cout << "EXECUTING" << std::endl;
                 break;
+            }
             case SUCCESS:
+            {
                 std::cout << "SUCCESS";
                 if (response.information.size() > 0)
                 {
-                    std::cout << response.information;
+                    std::cout << " " << response.information << std::endl;
                 }
-                std::cout << std::endl;
+                else
+                {
+                    std::cout << std::endl;
+                }
                 break;
+            }
+            case FAILURE:
+            {
+                std::cout << "FAILURE";
+                if (response.information.size() > 0)
+                {
+                    std::cout << " " << response.information << std::endl;
+                }
+                else
+                {
+                    std::cout << std::endl;
+                }
+                break;
+            }
             default:
                 break;
             }
@@ -138,6 +165,12 @@ private:
     long used_queue_id;
 
 public:
+
+    ~ClientManager()
+    {
+        msgctl(connector_msg_key, IPC_RMID, nullptr);
+        msgctl(worker_msg_key, IPC_RMID, nullptr);
+    }
 
     void Run()
     {
