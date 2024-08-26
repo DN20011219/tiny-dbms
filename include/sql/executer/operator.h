@@ -251,7 +251,14 @@ public:
     }
 
     /**
-     * @todo
+     * Insert: Inserts a row of values into a table in the database.
+     * 
+     * @param db: The database to insert into.
+     * @param table_name: The name of the table to insert into.
+     * @param columns: The columns to insert values into.
+     * @param values: The values to insert.
+     * 
+     * @return A SqlResponse object containing the result of the insertion.
      */
     SqlResponse* Insert(DB* db, string table_name, vector<Column> columns, vector<Value>values)
     {
@@ -298,19 +305,37 @@ public:
         return response;
     }
 
+
+    /**
+     * CheckColumn: Checks if a column exists in a table.
+     * 
+     * @param table: The table to check.
+     * @param column: The column to search for.
+     * 
+     * @return true if the column exists in the table, false otherwise.
+     */
     bool CheckColumn(ColumnTable* table, const Column& column)
     {
         for (default_length_size i = 0; i < table->column_size; i++)
         {
             if (table->columns.column_name_array[i] == column.col_name)
             {
-                // column.value_type = GetType(table->columns.column_type_array[i]);
                 return true;
             }
         }
         return false;
     }
 
+    /**
+     * JointRow: Joins a row of values with a column table.
+     * 
+     * @param table: The column table to join with.
+     * @param columns: The vector of column names.
+     * @param values: The vector of values to join.
+     * @param row: The output vector of joined values.
+     * 
+     * @return true if the join is successful, false otherwise.
+     */
     bool JointRow(ColumnTable* table, vector<Column>* columns, vector<Value>* values, vector<Value*>* row)
     {
         row->clear();
@@ -333,6 +358,14 @@ public:
         return true;
     }
 
+    /**
+     * FindValue: Finds the index of a column with a given name in a vector of columns.
+     * 
+     * @param col_name: The name of the column to find.
+     * @param columns: The vector of columns to search.
+     * 
+     * @return The index of the column if found, -1 otherwise.
+     */
     default_length_size FindValue(string col_name, vector<Column>* columns)
     {
         for (default_length_size i = 0; i < columns->size(); i++)
@@ -345,6 +378,16 @@ public:
         return -1;
     }
 
+    /**
+     * InsertRow: Inserts a row of values into a table in the database.
+     * 
+     * @param db: The database to insert into.
+     * @param table: The table to insert into.
+     * @param values: The vector of values to insert.
+     * @param response: The response object to store the result of the insertion.
+     * 
+     * @return true if the insertion is successful, false otherwise.
+     */
     bool InsertRow(DB* db, ColumnTable* table, vector<Value*>& values, SqlResponse* response)
     {
         // check values amount == table.col_amount
@@ -628,6 +671,238 @@ public:
     }
 
     /**
+     * Loads and filters data from a column in a database table.
+     * 
+     * This function takes a database, table name, column name, comparator, compare value, and a vector of value tags as input.
+     * It loads the data from the column, filters it based on the comparator and compare value, and stores the filtered values in the result vector.
+     * 
+     * If the comparator is null, it simply loads all values from the column without filtering.
+     * 
+     * @param db The database to load data from.
+     * @param table_name The name of the table to load data from.
+     * @param col_name The name of the column to load data from.
+     * @param comparator The comparator to use for filtering (optional).
+     * @param compare_value The value to compare with (optional).
+     * @param result_values The vector of value tags to store the filtered values.
+     */
+    void FilterLoad(DB* db, string table_name, string col_name, Comparator* comparator, Value* compare_value, vector<value_tag>& result_values)
+    {
+        if (comparator == nullptr)
+        {   
+            ColumnTable* table;
+            int column_offset;
+            GetColumn(*db, table_name, col_name, table, column_offset);
+            ValueType value_type = GetType(table->columns.column_type_array[column_offset]);
+            
+            // Initialize the tag offset to 0
+            default_long_int tag_offset = 0;
+
+            // Clear the result values vector
+            result_values.clear();
+
+            // Declare variables to store the column table and column data block offset
+            default_address_type column_data_block_offset;
+
+            // Declare a DataBlock object to store the data block
+            DataBlock block;
+
+            // Load the first data block of the column
+            bool has_next = LoadFirstDataBlockForRead(*db, table_name, col_name, column_data_block_offset, block);
+
+            // Store the offset of the next data block
+            default_address_type cache_next_block_offset = block.next_block_pointer;
+
+            // Filter the data block to find values
+            SerializeOp(&block, value_type, result_values, tag_offset);
+
+            // Release the reading block
+            lw->ReleaseReadingBlock(db->db_name, table_name, column_data_block_offset, block);
+
+            // Loop until there are no more data blocks
+            while(has_next)
+            {
+                // Load the next data block
+                has_next = LoadDataBlocksForRead(*db, table_name, cache_next_block_offset, block);
+
+                // Store the offset of the next data block
+                column_data_block_offset = cache_next_block_offset;
+                cache_next_block_offset = block.next_block_pointer;
+
+                // Filter the data block to find values
+                SerializeOp(&block, value_type, result_values, tag_offset);
+
+                // Release the reading block
+                lw->ReleaseReadingBlock(db->db_name, table_name, column_data_block_offset, block);
+            } 
+        }
+        else 
+        {
+            // Initialize the tag offset to 0
+            default_long_int tag_offset = 0;
+
+            // Clear the result values vector
+            result_values.clear();
+
+            // Declare variables to store the column table and column data block offset
+            default_address_type column_data_block_offset;
+
+            // Declare a DataBlock object to store the data block
+            DataBlock block;
+
+            // Load the first data block of the column
+            bool has_next = LoadFirstDataBlockForRead(*db, table_name, col_name, column_data_block_offset, block);
+
+            // Store the offset of the next data block
+            default_address_type cache_next_block_offset = block.next_block_pointer;
+
+            // Filter the data block to find values
+            FilterOp(&block, *comparator, compare_value, result_values, tag_offset);
+
+            // Release the reading block
+            lw->ReleaseReadingBlock(db->db_name, table_name, column_data_block_offset, block);
+
+            // Loop until there are no more data blocks
+            while(has_next)
+            {
+                // Load the next data block
+                has_next = LoadDataBlocksForRead(*db, table_name, cache_next_block_offset, block);
+
+                // Store the offset of the next data block
+                column_data_block_offset = cache_next_block_offset;
+                cache_next_block_offset = block.next_block_pointer;
+
+                // Filter the data block to find values
+                FilterOp(&block, *comparator, compare_value, result_values, tag_offset);
+
+                // Release the reading block
+                lw->ReleaseReadingBlock(db->db_name, table_name, column_data_block_offset, block);
+            }
+        }
+    }
+
+    /**
+     * Filters a data block based on a comparison operator and a value.
+     * 
+     * This function takes a data block, a comparator, a value to compare with, and a vector of value tags as input.
+     * It deserializes each value in the data block, compares it with the given value using the specified comparator,
+     * and adds a corresponding value tag to the result vector if the comparison matches.
+     * 
+     * @param block The data block to filter.
+     * @param comparator The comparison operator to use (BIGGER, LESS, EQUAL, NOT_EQUAL).
+     * @param compare_val The value to compare with.
+     * @param result_values The vector of value tags to store the filtered values.
+     * @param tag_offset The offset of the first value in the data block.
+     */
+    void FilterOp(DataBlock* block,  Comparator comparator, Value* compare_val, vector<value_tag>& result_values, default_long_int& tag_offset)
+    {
+        // Get the number of values in the data block
+        default_length_size value_nums = block->field_data_nums;
+        // Calculate the offset of the value in the data block
+        default_address_type value_offset = block->last_record_start_address;
+
+        // Loop through each value in the data block
+        while (value_nums > 0)
+        {
+            // Deserialize the value from the data block
+            Value* new_val = SerializeValueFromBuffer(compare_val->value_type, block->data, value_offset);
+            value_offset += new_val->GetValueLength();
+
+            // Compare the deserialized value with the given value
+            int com_result = Compare(compare_val, new_val);
+            switch (comparator)
+            {
+                case BIGGER:
+                {
+                    if (com_result > 0)
+                    {
+                        value_tag new_val_tag_pair(tag_offset, *new_val);
+                        result_values.push_back(new_val_tag_pair);
+                    } 
+                    else
+                        delete new_val;
+                    break;
+                }  
+                case LESS:
+                {
+                    if (com_result < 0)
+                    {
+                        value_tag new_val_tag_pair(tag_offset, *new_val);
+                        result_values.push_back(new_val_tag_pair);
+                    } 
+                    else
+                        delete new_val;
+                    break;
+                }
+                case EQUAL:
+                {
+                    if (com_result == 0)
+                    {
+                        value_tag new_val_tag_pair(tag_offset, *new_val);
+                        result_values.push_back(new_val_tag_pair);
+                    } 
+                    else
+                        delete new_val;
+                    break;
+                }
+                case NOT_EQUAL:
+                {
+                    if (com_result != 0)
+                    {
+                        value_tag new_val_tag_pair(tag_offset, *new_val);
+                        result_values.push_back(new_val_tag_pair);
+                    } 
+                    else
+                        delete new_val;
+                    break;
+                }        
+            }
+
+            // Decrement the value count and increment the tag offset
+            value_nums--;
+            tag_offset++;
+        }
+    }
+
+    /**
+     * Serializes a data block into a vector of value tags.
+     * 
+     * This function takes a data block, a value type, and a vector of value tags as input.
+     * It deserializes each value in the data block and adds a corresponding value tag to the result vector.
+     * The value tags contain the offset of the value in the data block and the deserialized value itself.
+     * 
+     * @param block The data block to serialize.
+     * @param value_type The type of values in the data block.
+     * @param result_values The vector of value tags to store the serialized values.
+     * @param tag_offset The offset of the first value in the data block.
+     */
+    void SerializeOp(DataBlock* block, ValueType value_type, vector<value_tag>& result_values, default_long_int& tag_offset)
+    {
+        // Get the number of values in the data block
+        default_length_size value_nums = block->field_data_nums;
+
+        // Calculate the offset of the value in the data block
+        default_address_type value_offset = block->last_record_start_address;
+
+        // Loop through each value in the data block
+        while (value_nums > 0)
+        {
+            // Deserialize the value from the data block
+            Value* new_val = SerializeValueFromBuffer(value_type, block->data, value_offset);
+            value_offset += new_val->GetValueLength();
+
+            // Create a value tag pair containing the offset and the deserialized value
+            value_tag new_val_tag_pair(tag_offset, *new_val);
+
+            // Add the value tag pair to the result vector
+            result_values.push_back(new_val_tag_pair);
+
+            // Decrement the value count and increment the tag offset
+            value_nums--;
+            tag_offset++;
+        }
+    }
+
+    /**
      * Reloads tables from a database file into memory, replacing any existing tables.
      * 
      * @param db The database object to reload tables into.
@@ -811,7 +1086,6 @@ public:
                 new_data_block->InitBlock(data_size);
             }
             
-            
             // Update the last block to point to the new block
             data_block->next_block_pointer = new_block_offset;
             lw->ReleaseWritingBlock(db.db_name, table->table_name, read_offset, *data_block);
@@ -935,6 +1209,8 @@ public:
         {
             return false;
         }
+
+        return true;
     }
 
     /**

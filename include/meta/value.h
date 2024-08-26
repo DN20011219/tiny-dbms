@@ -129,6 +129,7 @@ public:
         case INT_T:
             try {
                 num_value.int_value = std::stoi(raw_value);
+                value_type = INT_T;
             } catch (std::exception& e) {
                 return false;
                 // throw std::runtime_error("can not parse string to int");
@@ -137,6 +138,7 @@ public:
         case FLOAT_T:
             try {
                 num_value.float_value = std::stof(raw_value);
+                value_type = FLOAT_T;
             } catch (std::exception& e) {
                 return false;
                 // throw std::runtime_error("can not parse string to float");
@@ -146,6 +148,7 @@ public:
             num_value.int_value = raw_value.size();
             string_value = new char[raw_value.size()];
             memcpy(string_value, raw_value.c_str(), raw_value.size());
+            value_type = VCHAR_T;
             break;
         default:
             return false;
@@ -287,7 +290,19 @@ public:
     char* string_value;
 };
 
-
+/**
+ * Compares two values of different types.
+ * 
+ * This function compares two values of different types, including integers, floats, and strings.
+ * It returns an integer value indicating the result of the comparison:
+ *   - a negative value if a is less than b
+ *   - zero if a is equal to b
+ *   - a positive value if a is greater than b
+ * 
+ * @param a The first value to compare.
+ * @param b The second value to compare.
+ * @return An integer value indicating the result of the comparison.
+ */
 int Compare(Value* a, Value* b)
 {
     if (a->value_type == b->value_type)

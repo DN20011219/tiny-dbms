@@ -46,8 +46,9 @@ struct SqlResponse
     {
         default_address_type offset = 0;
 
-        memcpy(buffer, &sql_state, sizeof(SqlState));
-        offset += sizeof(SqlState);
+        uint32_t sql_state_value = static_cast<uint32_t>(sql_state);
+        memcpy(buffer, &sql_state_value, sizeof(uint32_t));
+        buffer += sizeof(uint32_t);
 
         int information_length = information.length();
         memcpy(buffer + offset, &information_length, sizeof(int));
@@ -61,8 +62,12 @@ struct SqlResponse
     {
         default_address_type offset = 0;
 
-        memcpy(&sql_state, buffer + offset, sizeof(SqlState));
-        offset += sizeof(SqlState);
+        // memcpy(&sql_state, buffer + offset, sizeof(SqlState));
+        // offset += sizeof(SqlState);
+        uint32_t sql_state_value = static_cast<uint32_t>(sql_state);
+        memcpy(&sql_state_value, buffer + offset, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        sql_state = SqlState(sql_state_value);
 
         int information_length = information.length();
         memcpy(&information_length, buffer + offset, sizeof(int));
@@ -73,6 +78,9 @@ struct SqlResponse
             char* inform = new char[information_length];
             memcpy(inform, buffer + offset, information_length);
             information.assign(inform);
+            delete[] inform;
+        } else {
+            information.clear(); // Initialize information to an empty string
         }
     }
 };
