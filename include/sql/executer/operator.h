@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <set>
+#include <map>
 
 #include "../../config.h"
 // meta struct
@@ -34,6 +35,7 @@
 #include "../../utils/cal_file_url_util.h"
 
 using std::set;
+using std::map;
 
 namespace tiny_v_dbms {
 
@@ -307,27 +309,6 @@ public:
         return response;
     }
 
-
-    /**
-     * CheckColumn: Checks if a column exists in a table.
-     * 
-     * @param table: The table to check.
-     * @param column: The column to search for.
-     * 
-     * @return true if the column exists in the table, false otherwise.
-     */
-    bool CheckColumn(ColumnTable* table, const Column& column)
-    {
-        for (default_length_size i = 0; i < table->column_size; i++)
-        {
-            if (table->columns.column_name_array[i] == column.col_name)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
     /**
      * JointParamRow: Joins a row of values with a column table.
      * 
@@ -574,14 +555,51 @@ public:
         return false;
     }
 
-    vector<default_length_size> GetSelectCols(ColumnTable* table, vector<Column>& columns)
+    /**
+     * CheckColumn: Checks if a column exists in a table.
+     * 
+     * @param table: The table to check.
+     * @param column: The column to search for.
+     * 
+     * @return true if the column exists in the table, false otherwise.
+     */
+    bool CheckColumn(ColumnTable* table, const Column& column)
     {
-
+        for (default_length_size i = 0; i < table->column_size; i++)
+        {
+            if (table->columns.column_name_array[i] == column.col_name)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
-    void InnerJoinColumns(vector<Row*>& result_rows, vector<value_tag>* col1_values, ...)
+    bool CheckColsExists(ColumnTable* table, vector<Column>& columns)
     {
-        
+        for (auto& item : columns)
+        {
+            if (!CheckColumn(table, item))
+                return false;
+        }
+        return true;
+    }
+
+    void InnerJoinColumns(vector<Row*>& result_rows, vector<vector<value_tag>*> cols)
+    {
+        size_t now_join_col = 0;
+        assert(cols.size() >= 2);
+
+        // first join
+        DifferentColAndOP(*cols[0], *cols[1], result_rows);
+        now_join_col += 2;
+
+        // else join
+        while (now_join_col < cols.size())
+        {
+            DifferentColAndOP(result_rows, *cols[now_join_col]);
+            now_join_col++;
+        }
     }
 
     /**
@@ -914,7 +932,7 @@ public:
         }
     }
 
-    void SameColAndOp(vector<value_tag> left_vector, vector<value_tag> right_vector, vector<value_tag>& result)
+    void SameColAndOp(vector<value_tag>& left_vector, vector<value_tag>& right_vector, vector<value_tag>& result)
     {
         set<size_t> existed_id;
         for (auto& item : left_vector)
@@ -930,7 +948,7 @@ public:
         }
     }
 
-    void SameColOrOp(vector<value_tag> left_vector, vector<value_tag> right_vector, vector<value_tag>& result)
+    void SameColOrOp(vector<value_tag>& left_vector, vector<value_tag>& right_vector, vector<value_tag>& result)
     {
         set<size_t> existed_id;
         for (auto& item : left_vector)
@@ -943,19 +961,138 @@ public:
             if (existed_id.find(item.first) == existed_id.end())
             {
                 result.push_back(item);
-                existed_id.insert(item.first);
+                // existed_id.insert(item.first);
             }
         }
     }
 
-    void DifferentColAndOP(vector<value_tag> left_vector, vector<value_tag> right_vector, vector<Row*>& result)
+    void DifferentColAndOP(vector<value_tag>& left_vector, vector<value_tag>& right_vector, vector<Row*>& result)
     {
-
+        map<size_t, Value*> existed_pair;
+        for (auto& item : left_vector)
+        {
+            existed_pair[item.first] = &item.second;
+        }
+        for (auto& item : right_vector)
+        {
+            size_t tag = item.first;
+            if (existed_pair.find(tag) != existed_pair.end())
+            {
+                result.push_back(new Row(tag, existed_pair[tag], &item));
+            }
+        }
     }
 
-    void DifferentColOrOP(vector<value_tag> left_vector, vector<value_tag> right_vector, vector<Row*>& result)
+    void DifferentColAndOP(vector<Row*>& left_vector, vector<value_tag>& right_vector)
+    {
+        vector<Row*> cached_result;
+        map<size_t, Row*> existed_pair;
+
+        for (auto& item : left_vector)
+        {
+            existed_pair[item->tag] = item;
+        }
+
+        for (auto& item : right_vector)
+        {
+            size_t tag = item.first;
+            if (existed_pair.find(tag) != existed_pair.end())
+            {
+                existed_pair[tag]->values.push_back(&item.second);
+                cached_result.push_back(existed_pair[tag]);
+            }
+        }
+
+        left_vector.clear();
+        left_vector.insert(left_vector.end(), cached_result.begin(), cached_result.end());
+    }
+
+    void DifferentColOrOP(vector<value_tag>& left_vector, vector<value_tag>& right_vector, vector<Row*>& result)
+    {
+        map<size_t, Value*> existed_pair;
+        string none_value = "None";
+
+        for (auto& item : left_vector)
+        {
+            existed_pair[item.first] = &item.second;
+        }
+
+        for (auto& item : right_vector)
+        {
+            size_t tag = item.first;
+            if (existed_pair.find(tag) != existed_pair.end())
+            {
+                result.push_back(new Row(tag, existed_pair[tag], &item));
+                existed_pair.erase(tag);
+            }
+            else
+            {
+                result.push_back(new Row(tag, new Value(none_value), &item));    
+            }
+        }
+
+        // add not paried value in left vector(all remaining values in existed_pair) to result
+        for (auto& pair : existed_pair) {
+            result.push_back(new Row(pair.first, pair.second, new Value(none_value)));
+        }
+
+        // sort result by Row.tag
+        std::sort(result.begin(), result.end(), [](const Row* a, const Row* b) {
+            return a->tag < b->tag;
+        });
+    }
+
+    void DifferentColOrOP(vector<Row*>& left_vector, vector<value_tag>& right_vector)
     {
         
+        assert(left_vector[0] != nullptr && left_vector[0]->values.size() > 0);
+
+        size_t left_row_val_amount = left_vector[0]->values.size();
+        vector<Row*> cached_result;
+        map<size_t, Row*> existed_pair;
+        string none_value = "None";
+        
+        // add left_vector
+        for (auto& item : left_vector)
+        {
+            existed_pair[item->tag] = item;
+        }
+
+        // add left_vector(paired or not paired) and right_vector
+        for (auto& item : right_vector)
+        {
+            size_t tag = item.first;
+            if (existed_pair.find(tag) != existed_pair.end())
+            {
+                existed_pair[tag]->values.push_back(&item.second);
+                cached_result.push_back(existed_pair[tag]);
+                existed_pair.erase(tag);
+            }
+            else
+            {
+                Row* new_row = new Row(tag, new Value(none_value));
+                for (size_t i = 1; i < left_row_val_amount; i++)
+                {
+                    new_row->values.push_back(new Value(none_value));
+                }
+                new_row->values.push_back(&item.second);
+                cached_result.push_back(new_row);    
+            }
+        }
+
+        // add not paried value in left vector(all remaining values in existed_pair) to result
+        for (auto& pair : existed_pair) {
+            pair.second->values.push_back(new Value(none_value));
+            cached_result.push_back(pair.second);
+        }
+
+        // sort result by Row.tag
+        std::sort(cached_result.begin(), cached_result.end(), [](const Row* a, const Row* b) {
+            return a->tag < b->tag;
+        });
+
+        left_vector.clear();
+        left_vector.insert(left_vector.end(), cached_result.begin(), cached_result.end());
     }
 
     // void NotOp()

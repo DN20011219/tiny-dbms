@@ -26,6 +26,19 @@ struct Row
     size_t tag;
     std::vector<Value*> values;
 
+    Row(size_t tag, Value* first_value, ...) : tag(tag)
+    {
+        va_list args;
+        va_start(args, first_value);
+        values.push_back(first_value);
+        while (true) {
+            Value* value = va_arg(args, Value*);
+            if (value == nullptr) break;
+            values.push_back(value);
+        }
+        va_end(args);
+    }
+
     /**
      * Serializes the object into a string representation.
      * 
@@ -33,23 +46,20 @@ struct Row
      * 
      * @return A string representation of the object.
      */
-    string Serialize()
+    string ToString()
     {
         string result = "("; // Initialize the result string with an opening parenthesis.
 
         for (const auto& item : values) // Iterate over the values in the object.
         {
-            char* val; // Declare a pointer to a character array to store the serialized value.
-            item->Serialize(val, 0); // Serialize the value into the character array.
-            string val_str(val); // Create a string from the character array.
-            result += val_str + ", "; // Append the serialized value to the result string.
+            result += item->ToString() + ", "; // Append the serialized value to the result string.
         }
 
         result += ")"; // Close the parenthesis.
 
         return result; // Return the serialized string.
     }
-    
+
     /**
      * Serializes the object into a string representation with a tag.
      * 
@@ -57,7 +67,7 @@ struct Row
      * 
      * @return A string representation of the object with a tag.
      */
-    string TagsSerialize()
+    string ToStringWithTag()
     {
         string result = "("; // Initialize the result string with an opening parenthesis.
 
@@ -65,10 +75,7 @@ struct Row
 
         for (const auto& item : values) // Iterate over the values in the object.
         {
-            char* val; // Declare a pointer to a character array to store the serialized value.
-            item->Serialize(val, 0); // Serialize the value into the character array.
-            string val_str(val); // Create a string from the character array.
-            result += val_str + ", "; // Append the serialized value to the result string.
+            result += item->ToString() + ", "; // Append the serialized value to the result string.
         }
 
         result += ")"; // Close the parenthesis.
