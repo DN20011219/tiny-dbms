@@ -260,9 +260,21 @@ public:
         }
     }
 
+
     string ToString() const
     {
-        return raw_value;
+        switch (value_type) {
+            case INT_T:
+                return std::to_string(num_value.int_value);
+            case FLOAT_T:
+                return std::to_string(num_value.float_value);
+            case VCHAR_T:
+                return string(string_value, num_value.int_value);
+            case RAW_VALUE:
+                return raw_value;
+            default:
+                throw std::runtime_error("Unsupported value type");
+        }
     }
 
     default_length_size GetValueLength()
