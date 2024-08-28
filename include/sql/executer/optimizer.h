@@ -17,7 +17,7 @@ struct ProjectionOp
     string table_name;
     vector<Column*> cols;
 
-    
+
 };
 
 struct Condition
@@ -72,9 +72,45 @@ public:
         delete sql;
     }
 
-    vector<Row*>* SelectAll(DB* db, string table_name)
+    SqlResponse* SelectAll(DB* db, string table_name, vector<Row*> result)
+    {
+        SqlResponse* response = new SqlResponse();
+
+        ColumnTable* table;
+        if (!op->CheckTableExists(db, table_name, table))
+        {   
+            response->sql_state = SqlState::FAILURE;
+            response->information = "table " + table_name + " not exist";
+            return response;
+        }
+        
+        if (table->column_size == 1)
+        {
+            
+        } 
+        else if (table->column_size == 2)
+        {
+            
+        } 
+
+
+        for (default_amount_type i = 0; i < table->column_size; i++)
+        {
+
+        }
+
+        response->sql_state = SqlState::SUCCESS;
+        return response;
+    }
+
+    vector<Row*>* InnerJoin()
     {
 
+    }
+
+    vector<value_tag>* Projection(DB* db, string table_name, string col_name)
+    {
+        
     }
 
     vector<value_tag>* Projection(DB* db, string table_name, string col_name, Comparator* comparator, Value* compare_value)
@@ -84,10 +120,7 @@ public:
         return col_values;
     }
 
-    vector<Row*>* Projection(DB* db, SelectFromOneTableSql* sql)
-    {
-        
-    }
+
 
 
 };

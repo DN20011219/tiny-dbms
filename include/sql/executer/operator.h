@@ -585,6 +585,27 @@ public:
         return true;
     }
 
+    /**
+     * Checks if a table exists in the database and returns a pointer to it if found.
+     * 
+     * @param db The database object to search in.
+     * @param table_name The name of the table to search for.
+     * @param table A reference to a ColumnTable pointer that will be set to the found table if it exists.
+     * @return true if the table exists, false otherwise.
+     */
+    bool CheckTableExists(DB* db, string table_name, ColumnTable*& table)
+    {
+        for (auto& item : db->tables)
+        {
+            if (item.table_name == table_name)
+            {
+                table = &item;
+                return true;
+            }    
+        }
+        return false;
+    }
+
     void InnerJoinColumns(vector<Row*>& result_rows, vector<vector<value_tag>*> cols)
     {
         size_t now_join_col = 0;
