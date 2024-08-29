@@ -39,6 +39,14 @@ struct Row
         va_end(args);
     }
 
+    ~Row()
+    {
+        for (Value* item : values)
+        {
+            delete item;
+        }
+    }
+
     /**
      * Serializes the object into a string representation.
      * 

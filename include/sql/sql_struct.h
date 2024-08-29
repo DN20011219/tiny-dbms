@@ -21,7 +21,6 @@ enum SqlState
 {
     UNSUBMIT,
     PARSE_ERROR,
-    EXECUTING,
     SUCCESS,
     FAILURE
 };

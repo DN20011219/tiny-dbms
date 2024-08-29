@@ -606,10 +606,25 @@ public:
         return false;
     }
 
-    void InnerJoinColumns(vector<Row*>& result_rows, vector<vector<value_tag>*> cols)
+
+    /**
+     * Performs an inner join on multiple columns and stores the result in a vector of Row objects.
+     * 
+     * @param result_rows A reference to a vector of Row pointers that will store the joined rows.
+     * @param cols A reference to a vector of pointers to vectors of value tags, where each inner vector represents a column to be joined.
+     */
+    void InnerJoinColumns(vector<Row*>& result_rows, vector<vector<value_tag*>*>& cols)
     {
         size_t now_join_col = 0;
-        assert(cols.size() >= 2);
+        
+        assert(cols.size() >= 1);
+
+        // if has only one col, directly convert, no need to join
+        if (cols.size() == 1)
+        {
+            ConverValuesToRow(result_rows, cols[0]);
+            return;
+        }
 
         // first join
         DifferentColAndOP(*cols[0], *cols[1], result_rows);
@@ -620,6 +635,20 @@ public:
         {
             DifferentColAndOP(result_rows, *cols[now_join_col]);
             now_join_col++;
+        }
+    }
+
+    /**
+     * Converts a vector of value tags to a vector of Row objects.
+     * 
+     * @param result_rows A reference to a vector of Row pointers that will store the converted rows.
+     * @param cols A pointer to a vector of value tags to be converted.
+     */
+    void ConverValuesToRow(vector<Row*>& result_rows, vector<value_tag*>* cols)
+    {
+        for (auto &item: *cols)
+        {
+            result_rows.push_back(new Row(item->first, &item->second));
         }
     }
 
@@ -736,7 +765,7 @@ public:
      * @param compare_value The value to compare with (optional).
      * @param result_values The vector of value tags to store the filtered values.
      */
-    void FilterLoad(DB* db, string table_name, string col_name, Comparator* comparator, Value* compare_value, vector<value_tag>& result_values)
+    void FilterLoad(DB* db, string table_name, string col_name, Comparator* comparator, Value* compare_value, vector<value_tag*>& result_values)
     {
         if (comparator == nullptr)
         {   
@@ -844,7 +873,7 @@ public:
      * @param result_values The vector of value tags to store the filtered values.
      * @param tag_offset The offset of the first value in the data block.
      */
-    void FilterOp(DataBlock* block,  Comparator comparator, Value* compare_val, vector<value_tag>& result_values, default_long_int& tag_offset)
+    void FilterOp(DataBlock* block,  Comparator comparator, Value* compare_val, vector<value_tag*>& result_values, default_long_int& tag_offset)
     {
         // Get the number of values in the data block
         default_length_size value_nums = block->field_data_nums;
@@ -866,7 +895,7 @@ public:
                 {
                     if (com_result > 0)
                     {
-                        value_tag new_val_tag_pair(tag_offset, *new_val);
+                        value_tag* new_val_tag_pair = new value_tag(tag_offset, *new_val);
                         result_values.push_back(new_val_tag_pair);
                     } 
                     else
@@ -877,7 +906,7 @@ public:
                 {
                     if (com_result < 0)
                     {
-                        value_tag new_val_tag_pair(tag_offset, *new_val);
+                        value_tag* new_val_tag_pair = new value_tag(tag_offset, *new_val);
                         result_values.push_back(new_val_tag_pair);
                     } 
                     else
@@ -888,7 +917,7 @@ public:
                 {
                     if (com_result == 0)
                     {
-                        value_tag new_val_tag_pair(tag_offset, *new_val);
+                        value_tag* new_val_tag_pair = new value_tag(tag_offset, *new_val);
                         result_values.push_back(new_val_tag_pair);
                     } 
                     else
@@ -899,7 +928,7 @@ public:
                 {
                     if (com_result != 0)
                     {
-                        value_tag new_val_tag_pair(tag_offset, *new_val);
+                        value_tag* new_val_tag_pair = new value_tag(tag_offset, *new_val);
                         result_values.push_back(new_val_tag_pair);
                     } 
                     else
@@ -926,7 +955,7 @@ public:
      * @param result_values The vector of value tags to store the serialized values.
      * @param tag_offset The offset of the first value in the data block.
      */
-    void SerializeOp(DataBlock* block, ValueType value_type, vector<value_tag>& result_values, default_long_int& tag_offset)
+    void SerializeOp(DataBlock* block, ValueType value_type, vector<value_tag*>& result_values, default_long_int& tag_offset)
     {
         // Get the number of values in the data block
         default_length_size value_nums = block->field_data_nums;
@@ -942,7 +971,7 @@ public:
             value_offset += new_val->GetValueLength();
 
             // Create a value tag pair containing the offset and the deserialized value
-            value_tag new_val_tag_pair(tag_offset, *new_val);
+            value_tag* new_val_tag_pair = new value_tag(tag_offset, *new_val);
 
             // Add the value tag pair to the result vector
             result_values.push_back(new_val_tag_pair);
@@ -953,50 +982,50 @@ public:
         }
     }
 
-    void SameColAndOp(vector<value_tag>& left_vector, vector<value_tag>& right_vector, vector<value_tag>& result)
+    void SameColAndOp(vector<value_tag*>& left_vector, vector<value_tag*>& right_vector, vector<value_tag*>& result)
     {
         set<size_t> existed_id;
         for (auto& item : left_vector)
         {
-            existed_id.insert(item.first);
+            existed_id.insert(item->first);
         }
         for (auto& item : right_vector)
         {
-            if (existed_id.find(item.first) != existed_id.end())
+            if (existed_id.find(item->first) != existed_id.end())
             {
                 result.push_back(item);
             }
         }
     }
 
-    void SameColOrOp(vector<value_tag>& left_vector, vector<value_tag>& right_vector, vector<value_tag>& result)
+    void SameColOrOp(vector<value_tag*>& left_vector, vector<value_tag*>& right_vector, vector<value_tag*>& result)
     {
         set<size_t> existed_id;
         for (auto& item : left_vector)
         {
             result.push_back(item);
-            existed_id.insert(item.first);
+            existed_id.insert(item->first);
         }
         for (auto& item : right_vector)
         {
-            if (existed_id.find(item.first) == existed_id.end())
+            if (existed_id.find(item->first) == existed_id.end())
             {
                 result.push_back(item);
-                // existed_id.insert(item.first);
+                // existed_id.insert(item->first);
             }
         }
     }
 
-    void DifferentColAndOP(vector<value_tag>& left_vector, vector<value_tag>& right_vector, vector<Row*>& result)
+    void DifferentColAndOP(vector<value_tag*>& left_vector, vector<value_tag*>& right_vector, vector<Row*>& result)
     {
         map<size_t, Value*> existed_pair;
         for (auto& item : left_vector)
         {
-            existed_pair[item.first] = &item.second;
+            existed_pair[item->first] = &item->second;
         }
         for (auto& item : right_vector)
         {
-            size_t tag = item.first;
+            size_t tag = item->first;
             if (existed_pair.find(tag) != existed_pair.end())
             {
                 result.push_back(new Row(tag, existed_pair[tag], &item));
@@ -1004,7 +1033,7 @@ public:
         }
     }
 
-    void DifferentColAndOP(vector<Row*>& left_vector, vector<value_tag>& right_vector)
+    void DifferentColAndOP(vector<Row*>& left_vector, vector<value_tag*>& right_vector)
     {
         vector<Row*> cached_result;
         map<size_t, Row*> existed_pair;
@@ -1016,10 +1045,10 @@ public:
 
         for (auto& item : right_vector)
         {
-            size_t tag = item.first;
+            size_t tag = item->first;
             if (existed_pair.find(tag) != existed_pair.end())
             {
-                existed_pair[tag]->values.push_back(&item.second);
+                existed_pair[tag]->values.push_back(&item->second);
                 cached_result.push_back(existed_pair[tag]);
             }
         }
@@ -1028,19 +1057,19 @@ public:
         left_vector.insert(left_vector.end(), cached_result.begin(), cached_result.end());
     }
 
-    void DifferentColOrOP(vector<value_tag>& left_vector, vector<value_tag>& right_vector, vector<Row*>& result)
+    void DifferentColOrOP(vector<value_tag*>& left_vector, vector<value_tag*>& right_vector, vector<Row*>& result)
     {
         map<size_t, Value*> existed_pair;
         string none_value = "None";
 
         for (auto& item : left_vector)
         {
-            existed_pair[item.first] = &item.second;
+            existed_pair[item->first] = &item->second;
         }
 
         for (auto& item : right_vector)
         {
-            size_t tag = item.first;
+            size_t tag = item->first;
             if (existed_pair.find(tag) != existed_pair.end())
             {
                 result.push_back(new Row(tag, existed_pair[tag], &item));
@@ -1063,7 +1092,7 @@ public:
         });
     }
 
-    void DifferentColOrOP(vector<Row*>& left_vector, vector<value_tag>& right_vector)
+    void DifferentColOrOP(vector<Row*>& left_vector, vector<value_tag*>& right_vector)
     {
         
         assert(left_vector[0] != nullptr && left_vector[0]->values.size() > 0);
@@ -1082,10 +1111,10 @@ public:
         // add left_vector(paired or not paired) and right_vector
         for (auto& item : right_vector)
         {
-            size_t tag = item.first;
+            size_t tag = item->first;
             if (existed_pair.find(tag) != existed_pair.end())
             {
-                existed_pair[tag]->values.push_back(&item.second);
+                existed_pair[tag]->values.push_back(&item->second);
                 cached_result.push_back(existed_pair[tag]);
                 existed_pair.erase(tag);
             }
@@ -1096,7 +1125,7 @@ public:
                 {
                     new_row->values.push_back(new Value(none_value));
                 }
-                new_row->values.push_back(&item.second);
+                new_row->values.push_back(&item->second);
                 cached_result.push_back(new_row);    
             }
         }

@@ -17,6 +17,7 @@
 
 // 
 #include "../sql/executer/operator.h"
+#include "../sql/executer/optimizer.h"
 #include "../sql/parser/parser.h"
 #include "../sql/parser/ast.h"
 
@@ -45,6 +46,7 @@ private:
     // execute tools
     Parser* parser;
     Operator* op;
+    Optimizer* opt;
 
 public:
 
@@ -53,6 +55,7 @@ public:
         user_session = user;
         working = true;
         parser = new Parser();
+        opt = new Optimizer(op);
     }
 
     ~Worker()
@@ -63,7 +66,8 @@ public:
         if (executing_sql_response != nullptr)
             delete executing_sql_response;
 
-       delete parser;
+        delete parser;
+        delete opt;
     }
 
     void Work()
@@ -110,7 +114,7 @@ public:
             return;
         }
 
-        // INSERT todo:test
+        // INSERT
         if (ast->GetType() == INSERT_INTO_TABLE_NODE)
         {   
             executing_sql_response = op->Insert(
@@ -124,6 +128,15 @@ public:
         }
 
         // SELECT todo:
+        if (ast->GetType() == SELECT_FROM_ONE_TABLE_NODE)
+        {   
+            executing_sql_response = opt->ExecuteSelect(
+                user_session->cached_db, 
+                ast->select_from_one_table_sql
+            );
+            return;
+        }
+
 
         // TODO: execute other type of sql
         
