@@ -45,9 +45,9 @@ struct SqlResponse
     {
         default_address_type offset = 0;
 
-        uint32_t sql_state_value = static_cast<uint32_t>(sql_state);
-        memcpy(buffer, &sql_state_value, sizeof(uint32_t));
-        buffer += sizeof(uint32_t);
+        int sql_state_value = static_cast<int>(sql_state);
+        memcpy(buffer, &sql_state_value, sizeof(int));
+        buffer += sizeof(int);
 
         int information_length = information.length();
         memcpy(buffer + offset, &information_length, sizeof(int));
@@ -61,11 +61,9 @@ struct SqlResponse
     {
         default_address_type offset = 0;
 
-        // memcpy(&sql_state, buffer + offset, sizeof(SqlState));
-        // offset += sizeof(SqlState);
-        uint32_t sql_state_value = static_cast<uint32_t>(sql_state);
-        memcpy(&sql_state_value, buffer + offset, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
+        int sql_state_value = static_cast<int>(sql_state);
+        memcpy(&sql_state_value, buffer + offset, sizeof(int));
+        offset += sizeof(int);
         sql_state = SqlState(sql_state_value);
 
         int information_length = information.length();

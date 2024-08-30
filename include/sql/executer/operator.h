@@ -648,7 +648,7 @@ public:
     {
         for (auto &item: *cols)
         {
-            result_rows.push_back(new Row(item->first, &item->second));
+            result_rows.push_back(new Row(item->first, {&item->second}));
         }
     }
 
@@ -1028,7 +1028,7 @@ public:
             size_t tag = item->first;
             if (existed_pair.find(tag) != existed_pair.end())
             {
-                result.push_back(new Row(tag, existed_pair[tag], &item));
+                result.push_back(new Row(tag, {existed_pair[tag], &item->second}));
             }
         }
     }
@@ -1072,18 +1072,18 @@ public:
             size_t tag = item->first;
             if (existed_pair.find(tag) != existed_pair.end())
             {
-                result.push_back(new Row(tag, existed_pair[tag], &item));
+                result.push_back(new Row(tag, {existed_pair[tag], &item->second}));
                 existed_pair.erase(tag);
             }
             else
             {
-                result.push_back(new Row(tag, new Value(none_value), &item));    
+                result.push_back(new Row(tag, {new Value(none_value), &item->second}));    
             }
         }
 
         // add not paried value in left vector(all remaining values in existed_pair) to result
         for (auto& pair : existed_pair) {
-            result.push_back(new Row(pair.first, pair.second, new Value(none_value)));
+            result.push_back(new Row(pair.first, {pair.second, new Value(none_value)}));
         }
 
         // sort result by Row.tag
@@ -1120,7 +1120,7 @@ public:
             }
             else
             {
-                Row* new_row = new Row(tag, new Value(none_value));
+                Row* new_row = new Row(tag, {new Value(none_value)});
                 for (size_t i = 1; i < left_row_val_amount; i++)
                 {
                     new_row->values.push_back(new Value(none_value));

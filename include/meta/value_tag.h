@@ -8,6 +8,7 @@
 #define VDBMS_META_VALUE_TAG_H_
 
 #include <vector>
+#include <initializer_list>
 
 #include "value.h"
 #include "../config.h"
@@ -26,26 +27,21 @@ struct Row
     size_t tag;
     std::vector<Value*> values;
 
-    Row(size_t tag, Value* first_value, ...) : tag(tag)
-    {
-        va_list args;
-        va_start(args, first_value);
-        values.push_back(first_value);
-        while (true) {
-            Value* value = va_arg(args, Value*);
-            if (value == nullptr) break;
-            values.push_back(value);
-        }
-        va_end(args);
+    Row(size_t tag, std::initializer_list<Value*> init_list) : tag(tag), values(init_list) {
+    
     }
 
-    ~Row()
-    {
-        for (Value* item : values)
-        {
-            delete item;
-        }
-    }
+    // ~Row()
+    // {
+    //     for (Value*& item : values)
+    //     {
+    //         if (item != nullptr)
+    //         {
+    //             delete item;
+    //             item = nullptr;
+    //         }
+    //     }
+    // }
 
     /**
      * Serializes the object into a string representation.
@@ -56,15 +52,12 @@ struct Row
      */
     string ToString()
     {
-        string result = "("; // Initialize the result string with an opening parenthesis.
+        string result = "| "; // Initialize the result string with an opening parenthesis.
 
         for (const auto& item : values) // Iterate over the values in the object.
         {
-            result += item->ToString() + ", "; // Append the serialized value to the result string.
+            result += item->ToString() + " | "; // Append the serialized value to the result string.
         }
-
-        result += ")"; // Close the parenthesis.
-
         return result; // Return the serialized string.
     }
 
@@ -77,16 +70,15 @@ struct Row
      */
     string ToStringWithTag()
     {
-        string result = "("; // Initialize the result string with an opening parenthesis.
 
-        result += std::to_string(tag) + ": "; // Append the tag to the result string.
+        string result = std::to_string(tag) + ": "; // Append the tag to the result string.
+        
+        result += "| "; // Initialize the result string with an opening parenthesis.
 
         for (const auto& item : values) // Iterate over the values in the object.
         {
-            result += item->ToString() + ", "; // Append the serialized value to the result string.
+            result += item->ToString() + " | "; // Append the serialized value to the result string.
         }
-
-        result += ")"; // Close the parenthesis.
 
         return result; // Return the serialized string with a tag.
     }

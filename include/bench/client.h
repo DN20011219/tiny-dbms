@@ -120,34 +120,24 @@ public:
                 std::cout << "PARSE_ERROR" << std::endl;
                 break;
             }
-            case EXECUTING:
-            {
-                std::cout << "EXECUTING" << std::endl;
-                break;
-            }
             case SUCCESS:
             {
-                std::cout << "SUCCESS";
                 if (response.information.size() > 0)
                 {
-                    std::cout << " " << response.information << std::endl;
+                    std::cout << response.information << std::endl;
                 }
                 else
                 {
-                    std::cout << std::endl;
+                    std::cout << "SUCCESS" << std::endl;
                 }
                 break;
             }
             case FAILURE:
             {
-                std::cout << "FAILURE";
+                std::cout << "FAILURE" << std::endl;
                 if (response.information.size() > 0)
                 {
                     std::cout << " " << response.information << std::endl;
-                }
-                else
-                {
-                    std::cout << std::endl;
                 }
                 break;
             }

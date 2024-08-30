@@ -86,7 +86,9 @@ public:
     }
 
     // onlu init value_type
-    Value(ValueType value_type) : value_type(value_type) {}
+    Value(ValueType value_type) : value_type(value_type) {
+        string_value = nullptr;
+    }
 
     // this constructor is used when not know it's type but has value.
     // So this time can use raw_value to store data for future value check and convert.
@@ -407,7 +409,6 @@ Value* SerializeValueFromBuffer(ValueType type, char* buffer, default_address_ty
             int val_int;
             memcpy(&val_int, buffer + offset, INT_LENGTH);
             value = new Value(val_int);
-            offset -= INT_LENGTH;
             break;
         }
         case FLOAT_T:
@@ -415,7 +416,6 @@ Value* SerializeValueFromBuffer(ValueType type, char* buffer, default_address_ty
             float val_float;
             memcpy(&val_float, buffer + offset, FLOAT_LENGTH);
             value = new Value(val_float);
-            offset -= FLOAT_LENGTH;
             break;
         }
         case VCHAR_T:
@@ -425,7 +425,6 @@ Value* SerializeValueFromBuffer(ValueType type, char* buffer, default_address_ty
             char* val_c = new char[str_length];
             memcpy(val_c, buffer + offset + sizeof(int), str_length);
             value = new Value(val_c, str_length);
-            offset -= sizeof(int) + str_length;
             delete[] val_c;
             break;
         }
@@ -435,7 +434,6 @@ Value* SerializeValueFromBuffer(ValueType type, char* buffer, default_address_ty
             memcpy(raw_val_c, buffer + offset, RAW_LENGTH);
             string raw_val_str(raw_val_c);
             value = new Value(raw_val_str);
-            offset -= RAW_LENGTH;
             delete[] raw_val_c;
             break;
         }

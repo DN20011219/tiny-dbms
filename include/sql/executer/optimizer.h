@@ -42,7 +42,7 @@ public:
 
     Optimizer(Operator* op) : op(op)
     {
-        
+
     }
 
     /**
@@ -136,9 +136,10 @@ public:
         // serialize result to response, and delete the values after user
         response->sql_state = SqlState::SUCCESS;
         response->information = SerializeRowsHeader(table);
-        response->information += "/n";
+        response->information += "\n";
         response->information += SerializeData(result);
-        FreeMemory(result);
+
+        // FreeMemory(result); no need to free, value_tag store the value object in stack
         
         return response;
     }
@@ -188,9 +189,10 @@ public:
         // serialize result to response, and delete the values after user
         response->sql_state = SqlState::SUCCESS;
         response->information = SerializeRowsHeader(columns);
-        response->information += "/n";
+        response->information += "\n";
         response->information += SerializeData(result);
-        FreeMemory(result);
+
+        // FreeMemory(result);
 
         return response;
     }
@@ -208,7 +210,7 @@ public:
         for (default_amount_type i = 0; i < table->column_size; i++)
         {
             header_str += table->columns.column_name_array[i];
-            header_str += "| ";
+            header_str += " | ";
         }
         return header_str;
     }
@@ -226,7 +228,7 @@ public:
         for (default_amount_type i = 0; i < columns.size(); i++)
         {
             header_str += columns[i].col_name;
-            header_str += "| ";
+            header_str += " | ";
         }
         return header_str;
     }
@@ -247,7 +249,7 @@ public:
             for (auto& item : result)
             {
                 records_data += item->ToStringWithTag();
-                records_data += "/n";
+                records_data += "\n";
             }
         } 
         else
@@ -255,20 +257,20 @@ public:
             for (auto& item : result)
             {
                 records_data += item->ToString();
-                records_data += "/n";
+                records_data += "\n";
             }
         }
 
         return records_data;
     }
 
-    void FreeMemory(vector<Row*>& result)
-    {
-        for (auto& item : result)
-        {
-            delete item;
-        }
-    }
+    // void FreeMemory(vector<Row*>& result)
+    // {
+    //     for (auto& item : result)
+    //     {
+    //         delete item;
+    //     }
+    // }
 
 };
 
