@@ -376,7 +376,7 @@ ValueType GetValueTypeFromStr(string value_str)
     throw std::runtime_error("can not parse value type: " + value_str);
 }
 
-ValueType GetType(default_enum_type type)
+ValueType GetEnumType(default_enum_type type)
 {
     return ValueType(type);
 }

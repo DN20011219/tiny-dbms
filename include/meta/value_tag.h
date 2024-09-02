@@ -82,6 +82,46 @@ struct Row
 
         return result; // Return the serialized string with a tag.
     }
+
+    /**
+     * Converts the object to a string representation, 
+     * including the specified number of values.
+     * 
+     * @param selected_amount The number of values to include in the string.
+     * @return A string representation of the object.
+     */
+    string ToString(default_amount_type selected_amount)
+    {
+        string result = "| "; // Initialize the result string with an opening parenthesis.
+
+        for (default_amount_type item = 0; item < values.size() && item < selected_amount; item++) // Iterate over the values in the object.
+        {
+            result += values[item]->ToString() + " | "; // Append the serialized value to the result string.
+        }
+        return result; // Return the serialized string.
+    }
+    
+    /**
+     * Converts the object to a string representation, 
+     * including the specified number of values and the object's tag.
+     * 
+     * @param selected_amount The number of values to include in the string.
+     * @return A string representation of the object, including its tag.
+     */
+    string ToStringWithTag(default_amount_type selected_amount)
+    {
+
+        string result = std::to_string(tag) + ": "; // Append the tag to the result string.
+        
+        result += "| "; // Initialize the result string with an opening parenthesis.
+
+        for (default_amount_type item = 0; item < values.size() && item < selected_amount; item++) // Iterate over the values in the object.
+        {
+            result += values[item]->ToString() + " | "; // Append the serialized value to the result string.
+        }
+
+        return result; // Return the serialized string with a tag.
+    }
 };
 
 }

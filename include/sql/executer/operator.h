@@ -279,7 +279,7 @@ public:
         }
 
         // check column exist
-        for (const auto& item : columns)
+        for (auto& item : columns)
         {
             if (!CheckColumn(table, item))
             {
@@ -327,12 +327,12 @@ public:
             default_length_size val_position = FindValue(table->columns.column_name_array[i], columns);
             if (val_position == -1)
             {
-                row->push_back(BuildDefaultValue(GetType(table->columns.column_type_array[i])));
+                row->push_back(BuildDefaultValue(GetEnumType(table->columns.column_type_array[i])));
             }
             else
             {
                 // init raw value to value type, if can not parse, return false
-                if (!values->at(val_position).InitValue(GetType(table->columns.column_type_array[i])))
+                if (!values->at(val_position).InitValue(GetEnumType(table->columns.column_type_array[i])))
                     return false;
                 row->push_back(new Value(values->at(val_position)));
             }
@@ -563,12 +563,13 @@ public:
      * 
      * @return true if the column exists in the table, false otherwise.
      */
-    bool CheckColumn(ColumnTable* table, const Column& column)
+    bool CheckColumn(ColumnTable* table, Column& column)
     {
         for (default_length_size i = 0; i < table->column_size; i++)
         {
             if (table->columns.column_name_array[i] == column.col_name)
             {
+                column.value_type = GetEnumType(table->columns.column_type_array[i]);
                 return true;
             }
         }
@@ -580,7 +581,9 @@ public:
         for (auto& item : columns)
         {
             if (!CheckColumn(table, item))
+            {
                 return false;
+            }
         }
         return true;
     }
@@ -772,7 +775,7 @@ public:
             ColumnTable* table;
             int column_offset;
             GetColumn(*db, table_name, col_name, table, column_offset);
-            ValueType value_type = GetType(table->columns.column_type_array[column_offset]);
+            ValueType value_type = GetEnumType(table->columns.column_type_array[column_offset]);
             
             // Initialize the tag offset to 0
             default_long_int tag_offset = 0;
@@ -888,7 +891,7 @@ public:
             value_offset += new_val->GetValueLength();
 
             // Compare the deserialized value with the given value
-            int com_result = Compare(compare_val, new_val);
+            int com_result = Compare(new_val, compare_val);
             switch (comparator)
             {
                 case BIGGER:

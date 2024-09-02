@@ -18,22 +18,6 @@ enum SqlExecutePlanType
     SELECT_FROM_SINGLE_TABLE_PLAN
 };
 
-class CreateDatabasePlan
-{
-    
-};
-
-class SqlExecutePlan
-{
-
-private:
-
-    SqlExecutePlanType plan_type;
-    
-public:
-    
-
-};
 
 }
 

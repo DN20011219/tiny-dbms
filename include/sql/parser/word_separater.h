@@ -1,11 +1,11 @@
 // Copyright (c) 2024 by dingning
 //
-// file  : work_separater.h
+// file  : word_separater.h
 // since : 2024-07-25
 // desc  : this is a word separating tools, use it can separate one sql to segments and store the segment type.
 
-#ifndef VDBMS_SQL_PARSER_SEPARATER_H_
-#define VDBMS_SQL_PARSER_SEPARATER_H_
+#ifndef VDBMS_SQL_PARSER_WORD_SEPARATER_H_
+#define VDBMS_SQL_PARSER_WORD_SEPARATER_H_
 
 #include <iostream>
 #include <string>
@@ -125,4 +125,4 @@ void PrintTokens(const std::vector<Token>& tokens) {
 }
 
 
-#endif // VDBMS_SQL_PARSER_SEPARATER_H_
+#endif // VDBMS_SQL_PARSER_WORD_SEPARATER_H_
