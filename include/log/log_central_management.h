@@ -54,6 +54,8 @@ private:
         {
             delete log_managers[i];
         }
+
+        deleteInstance();
     }
 
 public:

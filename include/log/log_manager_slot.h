@@ -22,8 +22,6 @@ public:
 
     LogManager* log_manager;
 
-
-
     LogManagerSlot()
     {
         is_free = true;

@@ -4,7 +4,7 @@
 // since : 2024-07-29
 // desc  : this is the definition of log unit. Each table has it's own log file, 
 // and each change (updata, delete) of record will firstly write to the tail of the log file. 
-// Then dbms will find some empty time to write the record in log file back to table data blocks.
+// Then dbms will find some empty time to write the update record in log file back to table data blocks.
 // So can decrease the cost that flash total block data to disk, even only change one bit.
 
 
@@ -18,27 +18,37 @@
 #include "../storage/file_management.h"
 #include "../storage/block_file_management.h"
 #include "../config.h"
+#include "value_tag.h"
 
 using std::fstream;
 using std::mutex;
 
-
 namespace tiny_v_dbms {
 
-enum LogType { UPDATE_LOG, DELETE_LOG };
+enum LogType { UPDATE_LOG, DELETE_LOG, UNKNOWN_LOG };
 
 class LogUnitHeader
 {
 
 public:
     LogType log_type;
+    size_t record_tag;
     default_length_size log_data_length; // length of log data body, if the log_type is DELETE, then log_data_length is 0
-    default_address_type block_address;
-    default_address_type record_address; 
 
+    LogUnitHeader()
+    {
+        log_type = UNKNOWN_LOG;
+        record_tag = -1;
+        log_data_length = 0;
+    }
+    
     default_length_size GetHeaderLength()
     {
-        return sizeof(LogType) + sizeof(default_length_size) + 2 * sizeof(default_address_type);
+        if (log_type == DELETE_LOG || log_type == UNKNOWN_LOG)
+        {
+            return sizeof(LogType) + sizeof(size_t);
+        }
+        return sizeof(LogType) + sizeof(size_t) + sizeof(default_length_size);
     }
 
     void Serialize(char* serialize_data)
@@ -48,6 +58,9 @@ public:
         memcpy(serialize_data + offset, &log_type, sizeof(LogType));
         offset += sizeof(LogType);
 
+        memcpy(serialize_data + offset, &record_tag, sizeof(size_t));
+        offset += sizeof(size_t);
+
         if (log_type == DELETE_LOG)
         {
             // no need to serialize the log_data_length, must be 0
@@ -55,13 +68,7 @@ public:
         else
         {
             memcpy(serialize_data + offset, &log_data_length, sizeof(default_length_size));
-            offset += sizeof(default_length_size);
         }
-
-        memcpy(serialize_data + offset, &block_address, sizeof(default_address_type));
-        offset += sizeof(default_address_type);
-
-        memcpy(serialize_data + offset, &record_address, sizeof(default_address_type));
     }
 
     void Deserialize(char* serialize_data)
@@ -71,6 +78,9 @@ public:
         memcpy(&log_type, serialize_data + offset, sizeof(LogType));
         offset += sizeof(LogType);
 
+        memcpy(&record_tag, serialize_data + offset, sizeof(size_t));
+        offset += sizeof(size_t);
+
         if (log_type == DELETE_LOG)
         {
             log_data_length = 0;
@@ -78,13 +88,7 @@ public:
         else
         {
             memcpy(&log_data_length, serialize_data + offset, sizeof(default_length_size));
-            offset += sizeof(default_length_size);
         }
-
-        memcpy(&block_address, serialize_data + offset, sizeof(default_address_type));
-        offset += sizeof(default_address_type);
-
-        memcpy(&record_address, serialize_data + offset, sizeof(default_address_type));
     }
 };
 
@@ -94,7 +98,7 @@ class LogUnit
 public:
 
     LogUnitHeader header;   // record the struct data of log
-    char* log_body;     // record the data of log.
+    char* log_body;     // record the data of log, it's one full record
 
     ~LogUnit()
     {
@@ -102,16 +106,67 @@ public:
             delete[] log_body;
     }
 
+    LogUnit() = default;
+
+    LogUnit(LogType log_type, size_t record_tag, std::vector<Value*>& record)
+    {
+        header.log_type = log_type;
+        header.record_tag = record_tag;
+        
+        if (log_type == DELETE_LOG)
+        {
+            header.log_data_length = 0;
+        }
+        else
+        {
+            SerializeVectorToBody(record);
+        }
+    }
+
     default_length_size GetLength()
     {
         return header.GetHeaderLength() + header.log_data_length;
     }
-
-    void Serialize(char* buffer)
+    
+    void SerializeVectorToBody(std::vector<Value*>& record)
     {
-        buffer = new char[header.GetHeaderLength() + header.log_data_length];
+        default_address_type offset = 0;
+
+        for (default_amount_type val_offset = 0; val_offset < record.size(); val_offset++)
+        {
+            record[val_offset]->Serialize(log_body, offset);
+            offset += record[val_offset]->GetValueLength();
+        }
+
+        header.log_data_length = offset;
+    }
+
+    void SerializeToBuffer(char* buffer)
+    {
+        default_length_size header_len = header.GetHeaderLength();
+        buffer = new char[header_len + header.log_data_length];
         header.Serialize(buffer);
-        memcpy(buffer + header.GetHeaderLength(), log_body, header.log_data_length); 
+
+        memcpy(buffer + header_len, log_body, header.log_data_length);
+    }
+
+    void Deserialize(ColumnTable* table, std::vector<Value*> values)
+    {
+        values.clear();
+
+        default_address_type offset = 0;
+        for (default_amount_type col_num = 0; col_num < table->column_size; col_num++)
+        {
+            Value* new_val = SerializeValueFromBuffer(GetEnumType(table->columns.column_type_array[col_num]), log_body, offset);
+            offset += new_val->GetValueLength();
+
+            if (offset > header.log_data_length)
+            {
+                throw std::runtime_error("Log file boundary violation");
+            }
+
+            values.push_back(new_val);
+        }
     }
 
 };
@@ -274,7 +329,7 @@ public:    // follows are functions about data
         default_address_type cache_read_address = log_file_stream.tellg();
 
         char* unit_buffer;
-        log_unit.Serialize(unit_buffer);
+        log_unit.SerializeToBuffer(unit_buffer);
 
         log_file_stream.write(unit_buffer, log_unit.GetLength());
 
@@ -283,43 +338,43 @@ public:    // follows are functions about data
     }
 
     // clean all logs, write logs back to table block, the clean strategy will designed in upper component
-    void WriteBackToTable()
-    {
-        if (!data_file_stream)
-        {
-            OpenTableDataFile();
-        }
+    // void WriteBackToTable()
+    // {
+    //     if (!data_file_stream)
+    //     {
+    //         OpenTableDataFile();
+    //     }
 
-        log_file_stream.seekg(0, std::ios::beg);
+    //     log_file_stream.seekg(0, std::ios::beg);
 
-        LogUnit log_unit;
-        while(ReadNextLog(log_unit))
-        {
-            // update one log record to table data file.
-            DataBlock block;
-            bfmm->ReadFromFile(data_file_stream, log_unit.header.block_address, block.data);
-            block.DeserializeFromBuffer(block.data);
+    //     LogUnit log_unit;
+    //     while(ReadNextLog(log_unit))
+    //     {
+    //         // update one log record to table data file.
+    //         DataBlock block;
+    //         bfmm->ReadFromFile(data_file_stream, log_unit.header.block_address, block.data);
+    //         block.DeserializeFromBuffer(block.data);
             
-            switch (log_unit.header.log_type)
-            {
-            case UPDATE_LOG:
-                // update the record data
-                memcpy(block.data + log_unit.header.record_address, log_unit.log_body, block.field_length);
-                break;
-            case DELETE_LOG:
-                // delete the record, earse from the block and re-organize block data to avoid fragment
-                block.DeleteData(log_unit.header.record_address);
-                break;
-            default:
-                throw std::runtime_error("can not found the log operation type");
-            }
+    //         switch (log_unit.header.log_type)
+    //         {
+    //         case UPDATE_LOG:
+    //             // update the record data
+    //             memcpy(block.data + log_unit.header.record_address, log_unit.log_body, block.field_length);
+    //             break;
+    //         case DELETE_LOG:
+    //             // delete the record, earse from the block and re-organize block data to avoid fragment
+    //             // block.DeleteData(log_unit.header.record_address);
+    //             break;
+    //         default:
+    //             throw std::runtime_error("can not found the log operation type");
+    //         }
 
-            bfmm->WriteBackBlock(data_file_stream, log_unit.header.block_address, block.data);
-        }
+    //         bfmm->WriteBackBlock(data_file_stream, log_unit.header.block_address, block.data);
+    //     }
 
-        // clean the log file
-        CleanLogFile();
-    }
+    //     // clean the log file
+    //     CleanLogFile();
+    // }
 
 
 };

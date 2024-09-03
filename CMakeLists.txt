@@ -24,3 +24,11 @@ include/storage/memory/easy_replacer.cpp
 include/storage/memory/buffer_pool.cpp
 include/storage/memory/lock_watcher.cpp
 )
+
+# Add a custom command to execute pre_set.sh before building the app
+add_custom_command(
+    TARGET app
+    PRE_BUILD
+    COMMAND chmod +x ${CMAKE_CURRENT_SOURCE_DIR}/pre_set.sh
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/pre_set.sh
+)

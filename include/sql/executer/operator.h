@@ -29,7 +29,7 @@
 #include "../../meta/block/data_block.h"
 
 // log
-#include "../../memory/log_central_management.h"
+#include "../../log/log_central_management.h"
 #include "../../meta/log.h"
 // util
 #include "../../utils/cal_file_url_util.h"
@@ -75,6 +75,7 @@ private:
     FileManagement* file_mm;
     BlockFileManagement* bfmm;
     LockWatcher* lw;
+    LogCentralManagement* lcm;
 
     // get install path from file
     void GetInstallPath(string& install_path) 
@@ -1506,121 +1507,80 @@ public:
         return true;
     }
 
-    void DeleteRecord()
+    void DeleteRecord(DB& db, ColumnTable* table, Row* record)
     {
+        // get the lm of the input table
+        LogManager* lm = lcm->GetLogManager(db.db_name, table->table_name);
 
+        // write log
+        LogUnit log(LogType::DELETE_LOG, record->tag, record->values);
+        lm->WriteLog(log);
+        lcm->ReleaseLogManager(db.db_name, table->table_name);
     }
 
-    void UpdateRecord()
-    {
-        
+    void UpdateRecord(DB& db, ColumnTable* table, Row* record)
+    {   
+        // check record is a correct record
+        assert(table->column_size == record->values.size());
+        default_amount_type  column_type_array_offset = 0;
+        for (auto& item : record->values)
+        {
+            assert(item->value_type == table->columns.column_type_array[column_type_array_offset]);
+            column_type_array_offset++;
+        }
+
+        // get the lm of the input table
+        LogManager* lm = lcm->GetLogManager(db.db_name, table->table_name);
+
+        // write log
+        LogUnit log(LogType::UPDATE_LOG, record->tag, record->values);
+        lm->WriteLog(log);
+        lcm->ReleaseLogManager(db.db_name, table->table_name);
     }
 
-    // for sql: SELECT column_name FROM table_name
-    // void SelectFromTable(string db_name, string table_name, string column_name, DataBlock& block)
-    // {
-    //     // check table and column exists.
-    //     ColumnTable table;
-    //     if (!CheckTableExist(db_name, table_name, table))
-    //     {
-    //         throw std::runtime_error("table: " + table_name + " not exist in db: " + db_name);
-    //     }
-
-    //     Columns column;
-    //     if (!CheckColumnExist(table, column_name, column)) 
-    //     {
-    //         throw std::runtime_error("column: " + column_name + "not exists in table: " + table_name);
-    //     }
-
-    //     // string data_file_uri = GetAndCreateDataFile(GetAndCreateDataFolderPath(GetAndCreateDbFolder(db_name)), table_name);
-    //     // default_address_type read_offset = column.column_storage_address_array[0];
-    //     // ReadOneDataBlock(data_file_uri, read_offset, block);
-    // }
-
     /**
-     * @brief Checks if a database exists
-     * @param db_name The name of the database to check
-     * @return True if the database exists, false otherwise
-    */
-    // bool CheckDbExist(string db_name)
-    // {
-    //     // get default table of base db
-    //     ColumnTable default_table;
-    //     GetDefaultTable(DEFAULT_DB_FOLDER_NAME, default_table);
+     * @todo: now each column's values will scan log file once, can use cache storing log file in memory to avoid these io cost.
+     */
+    void MergeValuesAndLog(DB& db, ColumnTable* table, default_amount_type column_offset, vector<Row*> column_values)
+    {
+        // get the lm of the input table
+        LogManager* lm = lcm->GetLogManager(db.db_name, table->table_name);
 
-    //     // check whether input db_name in it
-    //     for (default_amount_type i = 0; i < default_table.column_size; i++)
-    //     {
-    //         if (default_table.columns.column_name_array[i] == db_name)
-    //         {
-    //             return true;
-    //         }
-    //     }
-    //     return false;
-    // }
-
-    /**
-     * @brief Checks if a table exists in a database.
-     *
-     * @param db_name The name of the database.
-     * @param table_name The name of the table to check.
-     * @param table A reference to a ColumnTable object that will be populated with the table's metadata if it exists.
-     *
-     * @return True if the table exists, false otherwise.
-     *
-     * @example
-     * ColumnTable table;
-     * if (CheckTableExist("my_database", "my_table", table)) {
-     *     std::cout << "Table exists!" << std::endl;
-     * } else {
-     *     std::cout << "Table does not exist." << std::endl;
-     * }
-    */
-    // bool CheckTableExist(string db_name, string table_name, ColumnTable& table)
-    // {
-    //     // open db file, like "db.tvbb", and deserialize to get default table name
-    //     string db_file_name = GetAndCreateDbFolder(db_name) + "/"+ db_name + DB_FILE_SUFFIX;
-
-    //     DB db_file;
-    //     DeserializeDBFile(db_file, db_file_name);
-
-    //     // open default table file, like "default_table.tvdbb"
-    //     TableBlock block;
-
-    //     // read db headers file to block, offset is 0, because the first block must at 0 offset
-    //     ReadOneTableBlock(db_file.default_table_header_file_path, 0, block);
-    //     block.DeserializeFromBuffer(block.data);
-    //     // deserialize the tables in tables block and check
-    //     for (default_amount_type i = 0; i < block.table_amount; i++)
-    //     {
-    //         table.Deserialize(block.data, block.tables_begin_address[i]);
-    //         std::cout << "found table in .tvdbb: " << table.table_name << std::endl;
-    //         if (table.table_name == table_name)
-    //         {
-    //             return true;
-    //         }
-    //     }
-
-    //     // if not found, find in next block.
-    //     while (block.next_block_pointer != 0)
-    //     {
-    //         // read next block
-    //         ReadOneTableBlock(db_file.default_table_header_file_path, block.next_block_pointer, block);   
-    //         block.DeserializeFromBuffer(block.data);
-    //         // deserialize the tables in tables block and check
-    //         for (default_amount_type i = 0; i < block.table_amount; i++)
-    //         {
-    //             table.Deserialize(block.data, block.tables_begin_address[i]);
-    //             if (table.table_name == table_name)
-    //             {
-    //                 return true;
-    //             }
-    //         }
-    //     }
+        // merge 
+        LogUnit log_unit;
+        while(lm->ReadNextLog(log_unit))
+        {
+            MergeRecordAndLogByTag(table, column_values, column_offset, &log_unit);
+        }
         
-    //     // if still not found, return false
-    //     return false;
-    // }
+        lcm->ReleaseLogManager(db.db_name, table->table_name);
+    }
+
+    void MergeRecordAndLogByTag(ColumnTable* table, vector<Row*>& column_values, default_amount_type column_offset, LogUnit* log_unit)
+    {
+        auto it = column_values.begin();
+        while (it != column_values.end())
+        {
+            if ((*it)->tag == log_unit->header.record_tag)
+            {
+                if (log_unit->header.log_type == LogType::UPDATE_LOG)
+                {
+                    std::vector<Value*> values;
+                    log_unit->Deserialize(table, values);
+                    delete (*it)->values[column_offset]; // 注意：确保values[column_offset]是new出来的
+                    (*it)->values[column_offset] = new Value(*values[column_offset]);
+                }
+                else if (log_unit->header.log_type == LogType::DELETE_LOG)
+                {
+                    delete *it;
+                    it = column_values.erase(it);
+                }
+                break;
+            }
+            ++it;
+        }
+    }
+
 
     /**
      * @brief Checks if a column exists in a table.
@@ -1667,58 +1627,15 @@ public:
     }
 
 public:
+
     Operator()
     {
         file_mm = new FileManagement();
         bfmm = new BlockFileManagement();
         lw = new LockWatcher(SLOT_AMOUNT);
+        lcm = LogCentralManagement::GetInstance();
     }
-
-    /**
-     * @brief Cal and return the default table data path base on the base db path.
-     * @return default table data path of the input db path.
-     */
-    // string GetDefaultTableDataFolderOfBaseDbPath()
-    // {   
-    //     string db_folder = GetBaseDbFolder();
-    //     string table_path = GetDefaultTablePath(db_folder);
-
-    //     // create table data folder
-    //     string default_table_data_folder = table_path + "/" + DEFAULT_TABLE_DATA_FOLDER;
-    //     file_mm->OpencvDirAndMkdir(default_table_data_folder);
-    //     return default_table_data_folder;
-    // }
     
-    /**
-     * @brief Cal and return the default table data path base on the input db path.
-     * @param table_path db folder path
-     * @return default table data folder path of the input db path.
-     */
-    // string GetAndCreateDataFolderPath(string db_path)
-    // {   
-    //     string table_path = GetDefaultTablePath(db_path);
-    //     string default_table_data_folder = table_path + "/" + DEFAULT_TABLE_DATA_FOLDER;
-    //     file_mm->OpencvDirAndMkdir(default_table_data_folder);
-    //     return default_table_data_folder;
-    // }
-
-    /**
-     * @brief Get the data file path of input table_name. if not exist, then create it.
-     * @param data_folder_path data file store folder
-     * @param table_name table name
-     * @return data file path of input table_name
-     */
-    // string GetAndCreateDataFile(string data_folder_path, string table_name)
-    // {
-    //     string table_data_file = data_folder_path;
-    //     table_data_file += "/";
-    //     table_data_file += table_name;
-    //     table_data_file += TABLE_DATA_FILE_SUFFIX;
-    //     file_mm->ReadOrCreateFile(data_folder_path +);
-    //     lw.
-    //     return table_data_file;
-    // }
-
     // store a db object to file
     void SerializeDBFile(DB& db, string file_path)
     {   

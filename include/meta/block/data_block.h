@@ -30,8 +30,6 @@
 #include <string>
 
 #include "../../config.h" 
-#include "../../memory/memory_management.h"
-
 
 namespace tiny_v_dbms {
 

@@ -398,7 +398,7 @@ default_length_size GetValueTypeLength(ValueType type)
     }
 }
 
-Value* SerializeValueFromBuffer(ValueType type, char* buffer, default_address_type& offset)
+Value* SerializeValueFromBuffer(ValueType type, char* buffer, default_address_type offset)
 {
     Value* value;
 

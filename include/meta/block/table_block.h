@@ -32,7 +32,6 @@
 
 
 #include "../table/column_table.h"
-#include "../../memory/memory_management.h"
 
 namespace tiny_v_dbms {
 
