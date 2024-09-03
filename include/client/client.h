@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 #include "../config.h"
-#include "./queue_msg.h"
+#include "../bench/queue_msg.h"
 #include "../sql/sql_struct.h"
 
 using std::cin;
