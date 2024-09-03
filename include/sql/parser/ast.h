@@ -359,6 +359,17 @@ public:
 //     string table_name;
 //     vector<Column> columns;
 // };
+
+class DeleteFromTableSql
+{
+
+public:
+    DeleteFromTableSql(vector<Token> tokens)
+    {
+        // TODO:build sql
+    }
+};
+
 struct DropDatabaseSql
 {
 public:

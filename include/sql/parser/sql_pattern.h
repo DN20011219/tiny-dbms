@@ -250,7 +250,6 @@ public:
 };
 
 // all pattern can be matched has been list here:
-
 TokenPattern ID(1, {Token(IDENTIFIER_T, "")});
 TokenPattern NEXT_ID(2, {Token(OPERATOR_T, ","), Token(IDENTIFIER_T, "")}); // , ID
 
@@ -272,6 +271,7 @@ TokenPattern NEXT_COLUMN(2, {Token(OPERATOR_T, ","), Token(IDENTIFIER_T, "")}, f
 TokenPattern RIGHT_BRACKET(1, {Token(OPERATOR_T, ")")});
 TokenPattern SEMICOLON(1, {Token(OPERATOR_T, ";")});
 
+
 // SELECT SQL 
 TokenPattern SELECT(1, {Token(KEYWORD_T, "SELECT")});
 vector<TokenPattern> FIRST_COL_V({ID});
@@ -289,6 +289,11 @@ TokenPattern CONDITION(0, {}, false, CONDITION_V); // ID >/</=/!= VALUE
 vector<TokenPattern> NEXT_CONDITION_V({OPERATOR, ID, COMPARER, VALUE}); // ADN/OR ID >/</=/!= VALUE
 TokenPattern NEXT_CONDITION(0, {}, false, NEXT_CONDITION_V); // ADN/OR ID >/</=/!= VALUE
 
+// DELETE SQL
+TokenPattern DELETE(1, {Token(KEYWORD_T, "DELETE")});
+
+
+
 // belows are sql patterns:
 
 // CREATE DATABASE ID ;
@@ -303,11 +308,15 @@ vector<bool> CREATE_TABLE_SQL_PATTERN_NEC({true, true, true, true, true, true, f
 vector<TokenPattern> INSERT_INTO_SQL_PATTERN({INSERT, INTO, ID, LEFT_BRACKET, ID, NEXT_ID, RIGHT_BRACKET, VALUES, LEFT_BRACKET, VALUE, NEXT_VALUE, RIGHT_BRACKET, SEMICOLON});
 vector<bool> INSERT_INTO_SQL_PATTERN_NEC({true, true, true, true, true, false, true, true, true, true, false, true, true});
 
-// SELECT ID NEXT_ID FROM ID WHERE ID >/</=/!= VALUE AND/OR ID >/</=/!= VALUE;
+// SELECT ID NEXT_ID FROM ID WHERE ID >/</=/!= VALUE AND/OR ID >/</= VALUE;
 vector<TokenPattern>  SELECT_FROM_ONE_TABLE_SQL_PATTERN({SELECT, FIRST_COL, NEXT_ID, FROM, ID, CONDITION, NEXT_CONDITION, SEMICOLON});
 vector<bool>  SELECT_FROM_ONE_TABLE_SQL_PATTERN_NEC({true, true, false, true, true, false, false, true});
 
-// SELECT ID NEXT_ID FROM ID INNER JOIN ID ON ID = ID WHERE ID >/</=/!= VALUE
+// DELETE FROM ID WHERE ID >/</=/!= VALUE AND ID >/</= VALUE;
+vector<TokenPattern> DELETE_FROM_SQL_PATTERN({DELETE, FROM, ID, CONDITION, NEXT_CONDITION, SEMICOLON});
+vector<bool>  DELETE_FROM_SQL_PATTERN_NEC({true, true, true, false, false, false});
+
+// SELECT ID NEXT_ID FROM ID INNER JOIN ID ON ID = ID WHERE ID >/</=/ VALUE
 
 
 class SqlPatternMatcher
@@ -374,6 +383,7 @@ SqlPatternMatcher CREATE_DATABASE(CREATE_DATABASE_SQL_PATTERN, CREATE_DATABASE_S
 SqlPatternMatcher CREATE_TABLE(CREATE_TABLE_SQL_PATTERN, CREATE_TABLE_SQL_PATTERN_NEC);
 SqlPatternMatcher INSERT_INTO_TABLE(INSERT_INTO_SQL_PATTERN, INSERT_INTO_SQL_PATTERN_NEC);
 SqlPatternMatcher SELECT_FROM_ONE_TABLE(SELECT_FROM_ONE_TABLE_SQL_PATTERN, SELECT_FROM_ONE_TABLE_SQL_PATTERN_NEC);
+SqlPatternMatcher DELETE_FROM_TABLE(DELETE_FROM_SQL_PATTERN, DELETE_FROM_SQL_PATTERN_NEC);
 
 // store all match tool for using
 vector<SqlPatternMatcher> ALL_PATTERNS(
@@ -381,7 +391,8 @@ vector<SqlPatternMatcher> ALL_PATTERNS(
         CREATE_DATABASE, 
         CREATE_TABLE, 
         INSERT_INTO_TABLE,
-        SELECT_FROM_ONE_TABLE
+        SELECT_FROM_ONE_TABLE,
+        DELETE_FROM_TABLE
     }
 );
 vector<NodeType> ALL_PATTERNS_NODE_TYPE(
@@ -389,7 +400,8 @@ vector<NodeType> ALL_PATTERNS_NODE_TYPE(
         CREATE_DATABASE_NODE, 
         CREATE_TABLE_NODE, 
         INSERT_INTO_TABLE_NODE,
-        SELECT_FROM_ONE_TABLE_NODE
+        SELECT_FROM_ONE_TABLE_NODE,
+        DELETE_FROM_TABLE_NODE
     }
 );
 
@@ -420,6 +432,10 @@ public:
         case SELECT_FROM_ONE_TABLE_NODE:
             sql = new SelectFromOneTableSql(tokens);
             ast = new AST(SELECT_FROM_ONE_TABLE_NODE, sql);
+            break;
+        case DELETE_FROM_TABLE_NODE:
+            sql = new DeleteFromTableSql(tokens);
+            ast = new AST(DELETE_FROM_TABLE_NODE, sql);
             break;
         // TODO: more sql support is on designing
 
