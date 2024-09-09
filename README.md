@@ -3,9 +3,21 @@ A tiny dbms, includes some basic knowledge about dbms, and some implements of th
 
 # 1. how to start
 ## 1.1 Environment
-cmake
-clang++ (need to support c++ 17)
+### 1.1.1 cmake
+```
+website [https://cmake.org/download/]
 
+cmake version & support c++ version [https://cmake.org/cmake/help/latest/prop_tgt/CXX_STANDARD.html]
+
+cmake need to support c++ 17, so cmake version must newer than 3.8.
+```
+
+### 1.1.2 clang
+```
+clang version & support c++ version [https://clang.llvm.org/cxx_status.html]
+
+clang must newer than 5.
+```
 ## 1.2 run server
 ```
 mkdir build
