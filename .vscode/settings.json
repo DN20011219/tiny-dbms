@@ -72,5 +72,6 @@
         "utility": "cpp"
     },
     "workbench.settings.useSplitJSON": false,
-    "json.schemas": []
+    "json.schemas": [],
+    "DockerRun.DisableAutoGenerateConfig": true
 }

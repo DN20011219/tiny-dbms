@@ -18,6 +18,13 @@ clang version & support c++ version [https://clang.llvm.org/cxx_status.html]
 
 clang must newer than 5.
 ```
+
+### 1.1.3 MinGW
+```
+download website [https://www.mingw-w64.org/downloads/#sources]
+ [https://sourceforge.net/projects/mingw-w64/files/]
+```
+
 ## 1.2 run server
 ```
 mkdir build
@@ -28,7 +35,7 @@ make
 ```
 ## 1.3 run client
 ```
-cd include/client
+cd src/test/bench
 clang++ -std=c++17 client.cpp -o client 
 ```
 ### 1.3.1 connect to server

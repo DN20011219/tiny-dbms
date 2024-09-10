@@ -1,6 +1,18 @@
 {
     "configurations": [
         {
+            "name": "Windows",
+            "includePath": [
+                "${workspaceFolder}\\**"
+            ],
+            "defines": [],
+            "compilerPath": "D:\\Env\\clang+llvm-18.1.8-x86_64-pc-windows-msvc\\bin\\clang++.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        },
+        {
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/**"
