@@ -33,6 +33,13 @@ cmake ..
 make
 ./app
 ```
+
+```
+mkdir build
+cd build
+cmake --build ./
+```
+
 ## 1.3 run client
 ```
 cd src/test/bench
