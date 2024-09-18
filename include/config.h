@@ -7,9 +7,6 @@
 #ifndef VDBMS_CONFIG_H_
 #define VDBMS_CONFIG_H_
 
-#include <sys/ipc.h>
-#include <sys/msg.h>
-
 #include "meta/vector.h"
 
 namespace tiny_v_dbms {
@@ -78,7 +75,24 @@ namespace tiny_v_dbms {
 
     enum column_index_type {NONE, FLAT};
 
-    // config about client and server
+/*---- check platform type, now support win64 & mac mainly ----*/ 
+#if defined(__APPLE__) && defined(__MACH__)
+    #define PLATFORM_IS_MAC
+#elif defined(_WIN32) || defined(_WIN64)
+    #define PLATFORM_IS_WIN64
+#else
+    #error "Unsupported platform"
+#endif
+/*-------------------------------------------------------------*/
+
+
+/*---- config about client and server ----*/
+
+// use msg queue on mac os to communicate.
+#if defined(PLATFORM_IS_MAC)
+    // macOS-specific includes
+    #include <sys/ipc.h>
+    #include <sys/msg.h>
 
     #define CONNECTOR_MESSAGE_KEY ftok("tvdbms_connect", 7) 
     #define WORKER_MESSAGE_KEY ftok("tvdbms_work", 8) 
@@ -90,7 +104,6 @@ namespace tiny_v_dbms {
     #define WORKER_MSG_TYPE_SEND    100         // 
     #define WORKER_MSG_TYPE_RECV    200 
     #define BASE_DB_WORKER_RECEIVE_QUEUE_ID 875
-
 
     #define MSG_DATA_LENGTH 128                 // config about msg used by connecter
     #define IP_LENGTH 15
@@ -122,6 +135,21 @@ namespace tiny_v_dbms {
     #define FREE_QUEUE_ID_ARRAY
     const long free_queue_id_array[] = {1, 3, 5, 7, 9};
     #endif // FREE_QUEUE_ID_ARRAY
+
+
+
+
+#endif
+
+// use named pipes on win64 to communicate.
+#if defined(PLATFORM_IS_WIN64)
+    #include <windows.h>
+    
+#endif
+
+/*---------------------------------------*/
+
+
 }
 
 #endif // VDBMS_CONFIG_H_
