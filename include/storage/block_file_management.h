@@ -11,11 +11,6 @@
 #include <iostream>
 #include <fstream>
 
-
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <dirent.h>
-
 #include "../meta/block/data_block.h"
 #include "../meta/block/table_block.h"
 #include "../config.h"
