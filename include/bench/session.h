@@ -43,7 +43,8 @@ struct Session
 
     bool connect_state; // True means this connection is in use and connect success
 
-    void Serialize(char* buffer) {
+    void Serialize(char* buffer)
+    {
         int offset = 0;
 
         // Serialize client_ip
@@ -106,7 +107,7 @@ struct Session
         // Deserialize connect_state
         memcpy(&connect_state, buffer + offset, sizeof(bool));
     }
-
+    
     void Close()
     {
         delete cached_db;

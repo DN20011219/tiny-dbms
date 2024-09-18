@@ -29,14 +29,6 @@ download website [https://www.mingw-w64.org/downloads/#sources]
 ```
 mkdir build
 cd build
-cmake ..
-make
-./app
-```
-
-```
-mkdir build
-cd build
 cmake --build ./
 ```
 

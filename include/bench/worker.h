@@ -15,7 +15,6 @@
 #include "./queue_msg.h"
 #include "../sql/sql_struct.h"
 
-// 
 #include "../sql/executer/operator.h"
 #include "../sql/executer/optimizer.h"
 #include "../sql/parser/parser.h"

@@ -11,6 +11,7 @@
 #include <iostream>
 #include <set>
 #include <map>
+#include <algorithm>
 
 #include "../../config.h"
 // meta struct
