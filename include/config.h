@@ -75,11 +75,15 @@ namespace tiny_v_dbms {
 
     enum column_index_type {NONE, FLAT};
 
-/*---- check platform type, now support win64 & mac mainly ----*/ 
+/*---- check platform type, now support win & mac mainly ----*/ 
 #if defined(__APPLE__) && defined(__MACH__)
+    #ifndef PLATFORM_IS_MAC
     #define PLATFORM_IS_MAC
+    #endif // PLATFORM_IS_MAC
 #elif defined(_WIN32) || defined(_WIN64)
-    #define PLATFORM_IS_WIN64
+    #ifndef PLATFORM_IS_WIN
+    #define PLATFORM_IS_WIN
+    #endif // PLATFORM_IS_WIN
 #else
     #error "Unsupported platform"
 #endif
@@ -142,9 +146,8 @@ namespace tiny_v_dbms {
 #endif
 
 // use named pipes on win64 to communicate.
-#if defined(PLATFORM_IS_WIN64)
-    #include <windows.h>
-    
+#if defined(PLATFORM_IS_WIN)
+
 #endif
 
 /*---------------------------------------*/
