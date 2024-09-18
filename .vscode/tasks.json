@@ -14,8 +14,18 @@
         "label": "make client",   // 任务名
         "command": "clang++ -std=c++17 client.cpp -o client",       // 命令行调用
         "options": {
-          "cwd": "${workspaceFolder}/src/test/bench/"  // 在 build/ 目录中执行
+          "cwd": "${workspaceFolder}/src/test/bench/"  // 在 src/test/bench/ 目录中执行
+        }
+      },
+      {
+        "type": "shell",
+        "label": "make win app",   // 任务名
+        "command": "cmake --build ./",       // 命令行调用
+        "options": {
+          "cwd": "${workspaceFolder}/build"  // 在 build/ 目录中执行
         }
       }
+
+      
     ]
   }

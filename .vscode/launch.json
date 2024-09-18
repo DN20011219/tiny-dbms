@@ -7,7 +7,7 @@
         "request": "launch",
         "program": "${workspaceFolder}/build/app",  // 构建后的可执行文件
         "cwd": "${workspaceFolder}",
-        "preLaunchTask": "make app",  // 执行调试的前置任务名
+        "preLaunchTask": "make win app",  // 执行调试的前置任务名
         "MIMode": "lldb",               // 必填（与哪个 debugger 通信）
         "externalConsole": true,
       },
