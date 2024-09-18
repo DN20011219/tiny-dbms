@@ -10,11 +10,24 @@
 #include <string>
 #include <fstream>
 
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <dirent.h>
 
 #include "../config.h" 
+
+// 在mac平台上使用dirent对文件夹进行管理
+#if defined(PLATFORM_IS_MAC)
+    #include <sys/stat.h>
+    #include <sys/types.h>
+    #include <dirent.h>
+#endif
+
+// 在win平台上使用
+#if defined(PLATFORM_IS_WIN)
+    #include <windows.h>
+    #include <string>
+    #include <stdexcept>
+    #include <iostream>
+#endif
+
 
 namespace tiny_v_dbms {
 
@@ -95,6 +108,8 @@ public:
         return file_write;
     }
 
+
+#if defined(PLATFORM_IS_MAC)
     void OpenOrMkdir(const string& folder_path)
     {
         DIR * mydir =NULL;
@@ -124,9 +139,54 @@ public:
             closedir(dir);
         }
     }
+#endif
 
-private:
-    
+#if defined(PLATFORM_IS_WIN)
+    void OpenOrMkdir(const std::string folder_path)
+    {
+        DWORD file_attr = GetFileAttributes(folder_path.c_str());
+        if (file_attr == INVALID_FILE_ATTRIBUTES) // Folder does not exist
+        {
+            if (!CreateDirectory(folder_path.c_str(), NULL)) // Create directory
+            {
+                throw std::runtime_error("Failed to create directory!");
+            }
+        }
+        else if (!(file_attr & FILE_ATTRIBUTE_DIRECTORY)) // Exists but is not a directory
+        {
+            throw std::runtime_error("Path exists but is not a directory!");
+        }
+    }
+
+    void IsEmptyDir(const std::string folder_path)
+    {
+        WIN32_FIND_DATA find_file_data;
+        HANDLE hFind = FindFirstFile((folder_path + "\\*").c_str(), &find_file_data);
+
+        if (hFind == INVALID_HANDLE_VALUE)
+        {
+            throw std::runtime_error("Could not open directory!");
+        }
+
+        bool is_empty = true;
+        do
+        {
+            std::string filename(find_file_data.cFileName);
+            if (filename != "." && filename != "..")
+            {
+                is_empty = false;
+                break;
+            }
+        } while (FindNextFile(hFind, &find_file_data) != 0);
+
+        FindClose(hFind);
+
+        if (!is_empty)
+        {
+            throw std::runtime_error("Install path not empty!");
+        }
+    }
+#endif
 };
 
 }
