@@ -92,6 +92,18 @@ namespace tiny_v_dbms {
 
 /*---- config about client and server ----*/
 
+    // config about msg body, which is used to communication between client and server
+    #define MSG_DATA_LENGTH 128                 
+    #define IP_LENGTH 15
+    #define PORT_LENGTH 4
+    #define IDENTITY_LENGTH 4
+    #define CONNECT_DB_NAME_LENGTH_LENGTH 4
+    #define CONNECT_DB_NAME_LENGTH  100
+
+    #define WORK_MSG_DATA_LENGTH 2000            // config about msg used by worker, here limit the max length is 2000
+    #define SQL_MAX_LENGTH 1996             
+    #define SQL_LENGTH_LENGTH 4
+
 // use msg queue on mac os to communicate.
 #if defined(PLATFORM_IS_MAC)
     // macOS-specific includes
@@ -108,17 +120,6 @@ namespace tiny_v_dbms {
     #define WORKER_MSG_TYPE_SEND    100         // 
     #define WORKER_MSG_TYPE_RECV    200 
     #define BASE_DB_WORKER_RECEIVE_QUEUE_ID 875
-
-    #define MSG_DATA_LENGTH 128                 // config about msg used by connecter
-    #define IP_LENGTH 15
-    #define PORT_LENGTH 4
-    #define IDENTITY_LENGTH 4
-    #define CONNECT_DB_NAME_LENGTH_LENGTH 4
-    #define CONNECT_DB_NAME_LENGTH  100
-
-    #define WORK_MSG_DATA_LENGTH 2000            // config about msg used by worker, here limit the max length is 2000
-    #define SQL_MAX_LENGTH 1996             
-    #define SQL_LENGTH_LENGTH 4
 
     #ifndef CONNECTOR_MSG_KEY
     #define CONNECTOR_MSG_KEY
@@ -139,9 +140,6 @@ namespace tiny_v_dbms {
     #define FREE_QUEUE_ID_ARRAY
     const long free_queue_id_array[] = {1, 3, 5, 7, 9};
     #endif // FREE_QUEUE_ID_ARRAY
-
-
-
 
 #endif
 
