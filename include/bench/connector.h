@@ -18,10 +18,21 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
 
 #include "../config.h"
+
+// 在mac平台上使用消息通道进行通信
+#if defined(PLATFORM_IS_MAC)
+    #include <sys/ipc.h>
+    #include <sys/msg.h>
+#endif
+
+// 在win平台上使用命名管道实现相同的逻辑，从而进行通信
+#if defined(PLATFORM_IS_WIN)
+    #include <windows.h>
+
+#endif
+
 #include "./queue_msg.h"
 #include "./worker.h"
 #include "./server.h"
@@ -108,6 +119,8 @@ public:
         return new_session;
     } 
 
+
+#if defined(PLATFORM_IS_MAC)
     // this thread will handle all create db and drop db sql, by communicate with user's work thread in special msg queue
     void RunBaseDBThread()
     {
@@ -133,6 +146,94 @@ public:
             });
         new_worker_thread.detach();
     }
+#endif
+
+#if defined(PLATFORM_IS_WIN)
+    void RunForwardThread()
+    {
+        HANDLE hPipe;
+        ConnectMsg msg;
+        DWORD bytesRead, bytesWritten;
+
+        while (working) {
+            // 创建命名管道
+            hPipe = CreateNamedPipe(
+                PIPE_NAME,              // 管道名称
+                PIPE_ACCESS_DUPLEX,     // 读/写访问
+                PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT, // 消息模式
+                PIPE_UNLIMITED_INSTANCES, // 最大实例数
+                MSG_DATA_LENGTH,        // 输出缓冲区大小
+                MSG_DATA_LENGTH,        // 输入缓冲区大小
+                0,                      // 默认超时
+                NULL);                  // 默认安全属性
+
+            if (hPipe == INVALID_HANDLE_VALUE) {
+                throw std::runtime_error("CreateNamedPipe failed");
+            }
+
+            // 等待客户端连接
+            if (!ConnectNamedPipe(hPipe, NULL)) {
+                CloseHandle(hPipe);
+                throw std::runtime_error("ConnectNamedPipe failed");
+            }
+
+            // 从管道读取数据
+            if (!ReadFile(hPipe, &msg, sizeof(ConnectMsg), &bytesRead, NULL)) {
+                CloseHandle(hPipe);
+                throw std::runtime_error("ReadFile failed");
+            }
+
+            long special_queue_id;
+            memcpy(&special_queue_id, msg.msg_data, sizeof(long));
+
+            // 从客户端读取详细的连接信息
+            if (!ReadFile(hPipe, &msg, sizeof(ConnectMsg), &bytesRead, NULL)) {
+                CloseHandle(hPipe);
+                throw std::runtime_error("ReadFile failed");
+            }
+
+            // 解析连接信息
+            char* ip_cache = new char[IP_LENGTH];
+            int offset = 0;
+            memcpy(ip_cache, msg.msg_data + offset, IP_LENGTH);
+            std::string connect_ip = ip_cache;
+            delete[] ip_cache;
+            offset += IP_LENGTH;
+
+            int connect_port;
+            memcpy(&connect_port, msg.msg_data + offset, PORT_LENGTH);
+            offset += PORT_LENGTH;
+
+            int connect_identity_type;
+            memcpy(&connect_identity_type, msg.msg_data + offset, IDENTITY_LENGTH);
+            offset += IDENTITY_LENGTH;
+
+            int db_name_length;
+            memcpy(&db_name_length, msg.msg_data + offset, CONNECT_DB_NAME_LENGTH_LENGTH);
+            offset += CONNECT_DB_NAME_LENGTH_LENGTH;
+            assert(db_name_length < CONNECT_DB_NAME_LENGTH);
+
+            char* db_name_cache = new char[db_name_length];
+            memcpy(db_name_cache, msg.msg_data + offset, db_name_length);
+            std::string connect_db_name = db_name_cache;
+            delete[] db_name_cache;
+
+            // 执行连接操作
+            std::string connect_result = Connect(connect_ip, connect_port, connect_identity_type, connect_db_name);
+            ConnectMsg::SerializeConnectResult(connect_result, msg);
+
+            // 将结果发送回客户端
+            if (!WriteFile(hPipe, &msg, sizeof(ConnectMsg), &bytesWritten, NULL)) {
+                CloseHandle(hPipe);
+                throw std::runtime_error("WriteFile failed");
+            }
+
+            // 关闭管道
+            CloseHandle(hPipe);
+        }
+    }
+
+#endif
 
     void CreateNewRootSession(Session*& new_session, string ip, int port)
     {
