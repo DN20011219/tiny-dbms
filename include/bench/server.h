@@ -15,36 +15,50 @@ namespace tiny_v_dbms {
 
 class Server
 {
+
+private:
+    Operator* op;
     Connector* connector;
     map<Session*, Worker*> worker_map;
-
-    Operator* op;
 
 public:
     
     Server()
     {
-        // if db has not been installed, install
+
         op = new Operator();
+
+        // if db has not been installed, install
         if (op->Install())
         {
-            // 终止程序，要求重启
+            return; // 终止程序，重启程序后自动连接刚建立的base_db
         }
 
         connector = new Connector(worker_map, op);
     }
 
+#if defined(PLATFORM_IS_MAC)
     ~Server()
     {
         msgctl(connector_msg_key, IPC_RMID, nullptr);
         msgctl(worker_msg_key, IPC_RMID, nullptr);
         msgctl(base_db_worker_msg_key, IPC_RMID, nullptr);
+
+        Clean();
     }
+#endif
+#if defined(PLATFORM_IS_WIN)
+    ~Server()
+    {
+
+
+        Clean();
+    }   
+#endif
 
     void Run()
     {   
         // Run connector
-
         // Create one thread to handle all request to base_db (create database sql)
         connector->RunBaseDBThread();
 
@@ -52,6 +66,16 @@ public:
         connector->RunForwardThread();
     }
 
+    void Clean()
+    {
+        delete connector;
+        delete op;
+        for (auto item : worker_map)
+        {
+            delete item.first;
+            delete item.second;
+        }
+    }
 };
 
 }

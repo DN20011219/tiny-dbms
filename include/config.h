@@ -115,10 +115,7 @@ namespace tiny_v_dbms {
     #define BASE_DATABSE_MESSAGE_KEY ftok("tvdbms_base_db_work", 9) 
     #define CONNECTOR_MESSAGE_ID 40286          // this id is used to confirm the msg queue set id used by connecter and clients
     #define WORKER_MESSAGE_ID 40287             // this id is used to confirm the msg queue set id used by workers and clients
-    #define CONNECTOR_MSG_TYPE_SEND    100      // this type is used when server send msg to client
-    #define CONNECTOR_MSG_TYPE_RECV    200      // this type is used when client send msg to server
-    #define WORKER_MSG_TYPE_SEND    100         // 
-    #define WORKER_MSG_TYPE_RECV    200 
+
     #define BASE_DB_WORKER_RECEIVE_QUEUE_ID 875
 
     #ifndef CONNECTOR_MSG_KEY
@@ -145,6 +142,22 @@ namespace tiny_v_dbms {
 
 // use named pipes on win64 to communicate.
 #if defined(PLATFORM_IS_WIN)
+
+    #define MAX_PIPE_CONNECTIONS 10                                                     // 定义最大管道数为10，用于控制并发数
+
+
+    /*win平台对管道通过两种方式进行标识，其中最主要最简单的就是管道名*/
+    const std::string ROOT_PIPE_NAME = "\\\\.\\pipe\\";                                 // 这里采用“.”，也就是本机，同时作为服务器与客户端运行的根通道名
+    const std::string BASE_DB_WORKER_REC_PIPE_NAME = "server_base_db_worker_rec";       // base db worker通过这个name标识的通道接收请求
+    const std::string CONNECTOR_RECEIVE_PIPE_NAME = "connector_rec";                    // connector通过监听这个通道，处理来自不同客户端的连接请求，请求体无意义，主要作用是唤醒connector的监听线程，拿到一个唯一的用于后续进行沟通的通道名
+    const std::string WORKER_PIPE_NAME_SUFFIX = "pipe_";                                // worker通道前缀名，用于worker通道接收和发送消息
+
+    // 对pipename进行拼接处理的工具函数
+    std::string SplicePipeName(std::string name)
+    {
+        return ROOT_PIPE_NAME + name;
+    }
+    #define PIPE_NAME_TEXT(name) TEXT(SplicePipeName(name).c_str())
 
 #endif
 
