@@ -54,7 +54,7 @@ namespace tiny_v_dbms {
  * 提供两个函数:
  * 1、Get函数将从池中取得一个未使用名称并标记为已使用
  * 2、Release函数将释放一个名称标记为未使用
- * 目前并不会遇到并发问题，原因在于连接的建立和释放都是由单线程控制的，加锁主要目的是为后续serve自动检测僵尸连接并自动销毁做准备
+ * 目前并不会遇到并发问题，原因在于连接的建立和释放都是由单线程控制的，加锁主要目的是为后续serve扫描检测僵尸连接并自动销毁做准备
  */
 class PipeNamePool {
 private:
@@ -312,7 +312,7 @@ public:
 
     /**
      * 连接建立线程将监听公共管道，获取建立连接的客户端信息后有以下任务需要完成：
-     * 1、分配的工作通道名
+     * 1、分配具体的工作通道名
      * 2、打开连接的数据库
      * 3、建立对应的工作线程
      * 4、储存对应的session
@@ -320,7 +320,9 @@ public:
      */
     void RunForwardThread() {
         HANDLE hPipe;
-        char buffer[MSG_DATA_LENGTH];
+        ConnectMsg msg; // 用于接收连接请求和发送连接结果
+        ConnectionRequest request; // 用于解析连接请求
+        ConnectionResult result; // 用于返回连接建立结果
         DWORD bytesRead;
 
         bool working = true;
@@ -344,29 +346,30 @@ public:
                 throw std::runtime_error("Named pipe creation failed");
             }
 
-            // Wait for the client to connect
+            // 1、等待客户端发起连接
             bool connected = ConnectNamedPipe(hPipe, NULL) ? TRUE : (GetLastError() == ERROR_PIPE_CONNECTED);
-
             if (!connected) {
                 CloseHandle(hPipe);
                 throw std::runtime_error("Pipe connection failed");
             }
 
-            std::cout << "Pipe connected, waiting for messages..." << std::endl;
+            // 2、获取请求数据
+            if (!ReadFile(hPipe, msg.msg_data, sizeof(msg.msg_data), &bytesRead, NULL)) {
+                // 如果解析失败，发送一条连接失败信息
+                result.ConnectFailure("Failed to read or deserialize from pipe.");
+                SendConnectResultThroughPipe(hPipe, &result);
 
-            if (ReadFile(hPipe, buffer, sizeof(buffer), &bytesRead, NULL)) {
-
-                std::cout << "Received message: " << buffer << std::endl;
-                
-                ConnectionRequest request;
-                request.Deserialize(buffer);
-
-                // open db
-            } else {
-                std::cerr << "Failed to read from pipe." << std::endl;
-                break;
+                // 关闭通道
+                CloseHandle(hPipe);
+                delete connect_result;
+                continue;   
             }
 
+            // 3、建立连接
+
+            request.Deserialize(msg.msg_data);
+
+            // 3.1、检查连接池资源是否充足
             string pipe_name;
             try
             {
@@ -374,94 +377,52 @@ public:
             }
             catch(std::runtime_error e)
             {
-                DWORD bytesWritten;
-
                 // 发送连接失败消息
-                ConnectionResult result;
-                result.state = false;
-                result.inform = "No enough pipe resource";
-                char* buffer = new char[result.Size()];
-                result.Serialize(buffer);
-                
-                WriteFile(hPipe, buffer, result.Size(), &bytesWritten, NULL);
+                result.ConnectFailure("No enough pipe resource");
+                SendConnectResultThroughPipe(hPipe, &result);
 
-                delete[] buffer;
+                // 关闭通道
                 CloseHandle(hPipe);
-
-                continue;
+                delete connect_result;
+                continue;   
             }
 
-            //  todo:发送分配的pipe_name给客户端
+            // 3.2、打开数据库并设置session中的数据库缓存信息
+            Session* new_session = Connect(
+                request.client_ip, 
+                request.client_port,
+                UserIdentity(request.connect_identity_type), 
+                request.connect_db_name);
 
+            // 3.3、返回连接结果
+            msg.SerializeConnectResult(new_session);
+            SendConnectMsgThroughPipe(hPipe, &msg);
 
+            // 3.4、关闭通道
             CloseHandle(hPipe);
         }
-
-
     }
-    // this thread will watch the msg queue and serialize the information about connect 
-    void RunForwardThread()
+
+    void SendConnectResultThroughPipe(HANDLE& hPipe, ConnectionResult* result) 
     {
-        // check msg queue is ready
-        if (connector_msg_key < 0)
+        DWORD bytesWritten = 0;
+        if (!WriteFile(hPipe, result, sizeof(result->Size()), &bytesWritten, NULL)) 
         {
-            throw std::runtime_error("msg queue not start successfully");
+            // 处理写入管道失败的情况
+            CloseHandle(hPipe);
+            throw std::runtime_error("Failed to write ConnectResult to pipe.");
         }
+    }
 
-        ConnectMsg msg;
-        msg.msg_type = CONNECTOR_MESSAGE_ID;
-        while(working){
-            // get one call msg from public queue, contains one unique queue id used to communicate.
-            // first msg data struct: | receive queue id | send back queue id |
-            msgrcv(connector_msg_key, &msg, MSG_DATA_LENGTH, CONNECTOR_MSG_TYPE_RECV, 0);
-            if (!working) break;
-
-            // get receive queue id and send back queue id
-            // memcpy(&msg.msg_type, msg.msg_data, sizeof(long));
-            long special_queue_id;
-            memcpy(&special_queue_id, msg.msg_data, sizeof(long));
-            
-            // get one detail message from special message queue(client send information msg to connect server)
-            msgrcv(connector_msg_key, &msg, MSG_DATA_LENGTH, special_queue_id, 0);
-            if (!working) break;
-            
-            // get connection information from input stream
-            msg_queue_id = msg.msg_type;   // cache the special queue id, and it will be used lately between client and the sql worker of the client
-                
-            default_address_type offset = 0;
-
-            char* ip_cache = new char[IP_LENGTH];
-            memcpy(ip_cache, msg.msg_data + offset, IP_LENGTH);
-            connect_ip = ip_cache;
-            delete[] ip_cache;
-            offset += IP_LENGTH;
-
-            memcpy(&connect_port, msg.msg_data + offset, PORT_LENGTH);
-            offset += PORT_LENGTH;
-
-            int connect_identity_type;
-            memcpy(&connect_identity_type, msg.msg_data + offset, IDENTITY_LENGTH);
-            offset += IDENTITY_LENGTH;
-            connect_identity = UserIdentity(connect_identity_type);
-
-            int db_name_length;
-            memcpy(&db_name_length, msg.msg_data + offset, CONNECT_DB_NAME_LENGTH_LENGTH);
-            offset += CONNECT_DB_NAME_LENGTH_LENGTH;
-            assert(db_name_length < CONNECT_DB_NAME_LENGTH);
-
-            char* db_name_cache = new char[db_name_length];
-            memcpy(db_name_cache, msg.msg_data + offset, db_name_length);
-            connect_db_name = db_name_cache;
-            delete[] db_name_cache;
-
-            connect_result = Connect(connect_ip, connect_port, connect_identity, connect_db_name);
-            ConnectMsg::SerializeConnectResult(connect_result, msg);
-
-            msg.msg_type = special_queue_id + 1; // send back use send_back_queue_id + 1, because this queue has been used to receive information msg sent by client
-            msgsnd(connector_msg_key, &msg, MSG_DATA_LENGTH, 0);
-                
-            connect_result = nullptr;
-        }   
+    void SendConnectMsgThroughPipe(HANDLE& hPipe, ConnectMsg* result) 
+    {
+        DWORD bytesWritten = 0;
+        if (!WriteFile(hPipe, result->msg_data, MSG_DATA_LENGTH, &bytesWritten, NULL)) 
+        {
+            // 处理写入管道失败的情况
+            CloseHandle(hPipe);
+            throw std::runtime_error("Failed to write ConnectMsg to pipe.");
+        }
     }
 
 #endif
@@ -504,7 +465,12 @@ public:
     {
         // create new session
         new_session = new Session();
-        new_session->msg_queue_id = msg_queue_id;
+        #if defined(PLATFORM_IS_MAC)
+            new_session->msg_queue_id = msg_queue_id;
+        #endif
+        #if defined(PLATFORM_IS_WIN)
+            new_session->pipe_name = pipe_name;
+        #endif
         new_session->client_ip = ip;
         new_session->client_port = port;
         new_session->connect_db_name = db_name;

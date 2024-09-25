@@ -12,6 +12,7 @@
 #define VDBMS_BENCH_SESSION_H_
 
 #include <string>
+#include <mutex>
 
 #include "../meta/db/db.h"
 
@@ -31,6 +32,8 @@ struct Session
 
     // belows fields are used to cache the msg about db and tables, to avoid frequently io.
     DB* cached_db;
+    int db_user_amount;
+    std::mutex db_mutex;
 
     // belows fields are used to connect
 #if defined(PLATFORM_IS_MAC)
@@ -40,9 +43,9 @@ struct Session
     std::string pipe_name;  // 使用pipename来指定管道
 #endif
 
+    // 客户端信息
     UserIdentity connector_identity;
     std::string connect_db_name;
-
     std::string client_ip;
     int client_port;
 
@@ -113,36 +116,138 @@ struct Session
         memcpy(&connect_state, buffer + offset, sizeof(bool));
     }
     
+    string Serialize()
+    {
+        
+    }
+
+    // // 下方两个序列化函数用于建立连接前发送客户端连接请求信息
+    // void SerializeClientInform(char* buffer)
+    // {
+    //     int offset = 0;
+
+    //     // Serialize client_ip
+    //     int ip_length = client_ip.length();
+    //     memcpy(buffer + offset, &ip_length, sizeof(int));
+    //     offset += sizeof(int);
+    //     memcpy(buffer + offset, client_ip.c_str(), ip_length);
+    //     offset += ip_length;
+
+    //     // Serialize client_port
+    //     memcpy(buffer + offset, &client_port, sizeof(int));
+    //     offset += sizeof(int);
+
+    //     // Serialize connector_identity
+    //     memcpy(buffer + offset, &connector_identity, sizeof(UserIdentity));
+    //     offset += sizeof(UserIdentity);
+
+    //     // Serialize connect_db_name
+    //     int db_name_length = connect_db_name.length();
+    //     memcpy(buffer + offset, &db_name_length, sizeof(int));
+    //     offset += sizeof(int);
+    //     memcpy(buffer + offset, connect_db_name.c_str(), db_name_length);
+    //     offset += db_name_length;
+    // }
+
+    // void DeserializeClientInform(char* buffer)
+    // {
+    //     int offset = 0;
+
+    //     // Deserialize client_ip
+    //     int ip_length;
+    //     memcpy(&ip_length, buffer + offset, sizeof(int));
+    //     offset += sizeof(int);
+    //     char* ip = new char[ip_length];
+    //     memcpy(ip, buffer + offset, ip_length);
+    //     client_ip = ip;
+    //     offset += ip_length;
+
+    //     // Deserialize client_port
+    //     memcpy(&client_port, buffer + offset, sizeof(int));
+    //     offset += sizeof(int);
+
+    //     // Deserialize connector_identity
+    //     memcpy(&connector_identity, buffer + offset, sizeof(UserIdentity));
+    //     offset += sizeof(UserIdentity);
+
+    //     // Deserialize connect_db_name
+    //     int db_name_length;
+    //     memcpy(&db_name_length, buffer + offset, sizeof(int));
+    //     offset += sizeof(int);
+
+    //     char* db_name = new char[db_name_length];
+    //     memcpy(db_name, buffer + offset, db_name_length);
+    //     connect_db_name = db_name;
+    //     offset += db_name_length;
+    // }
+
     void Close()
     {
         delete cached_db;
     }
 };
 
+/**
+ * @brief: win平台下建立连接使用的结构体，由客户端向服务器发送
+ */
 struct ConnectionRequest
 {
-    unsigned long client_ip;
-    
-    std::string db_name;
+    // 客户端信息
+    int connect_identity_type;
+    std::string connect_db_name;
+    std::string client_ip;
+    int client_port;
 
-    void Serialize(char* buffer) 
-    {
-        int str_len = db_name.length();
-        memcpy(buffer, &str_len, sizeof(int));
-        memcpy(buffer + sizeof(int), db_name.c_str(), str_len);
+    void Serialize(char* buffer) {
+        int offset = 0;
+
+        // 序列化客户端信息
+        memcpy(buffer + offset, &connect_identity_type, sizeof(int));
+        offset += sizeof(int);
+
+        int db_name_length = connect_db_name.length();
+        memcpy(buffer + offset, &db_name_length, sizeof(int));
+        offset += sizeof(int);
+        memcpy(buffer + offset, connect_db_name.c_str(), db_name_length);
+        offset += db_name_length;
+
+        int ip_length = client_ip.length();
+        memcpy(buffer + offset, &ip_length, sizeof(int));
+        offset += sizeof(int);
+        memcpy(buffer + offset, client_ip.c_str(), ip_length);
+        offset += ip_length;
+
+        memcpy(buffer + offset, &client_port, sizeof(int));
+        offset += sizeof(int);
     }
 
-    void Deserialize(char* buffer) 
-    {
-        int str_len;
-        memcpy(&str_len, buffer, sizeof(int));
-        char* str_ptr = new char[str_len];
-        memcpy(str_ptr, buffer + sizeof(int), str_len);
-        db_name = str_ptr;
-        delete[] str_ptr;
+    void Deserialize(char* buffer) {
+        int offset = 0;
+
+        // 反序列化客户端信息
+        memcpy(&connect_identity_type, buffer + offset, sizeof(int));
+        offset += sizeof(int);
+
+        int db_name_length;
+        memcpy(&db_name_length, buffer + offset, sizeof(int));
+        offset += sizeof(int);
+        connect_db_name = std::string(buffer + offset, db_name_length);
+        offset += db_name_length;
+
+        int ip_length;
+        memcpy(&ip_length, buffer + offset, sizeof(int));
+        offset += sizeof(int);
+        client_ip = std::string(buffer + offset, ip_length);
+        offset += ip_length;
+
+        memcpy(&client_port, buffer + offset, sizeof(int));
+        offset += sizeof(int);
     }
 };
 
+/**
+ * @brief: win平台下建立连接的返回结果
+ */
 struct ConnectionResult
 {
     bool state; 
@@ -184,6 +289,18 @@ struct ConnectionResult
     size_t Size()
     {
         return sizeof(bool) + sizeof(size_t) + inform.size();
+    }
+
+    void ConnectFailure(std::string information)
+    {
+        state = false;
+        inform = information;
+    }
+
+    void ConnectSuccess(std::string information)
+    {
+        state = true;
+        inform = information;
     }
 };
 
